@@ -1,0 +1,58 @@
+[project]
+name = "pehchaan"
+version = "0.1.0"
+description = "Identity and eligibility verification for hackathon registrations"
+requires-python = ">=3.11,<3.13"
+dependencies = [
+  # API
+  "fastapi>=0.115",
+  "uvicorn[standard]>=0.30",
+  "pydantic>=2.8",
+  "pydantic-settings>=2.4",
+  "python-multipart>=0.0.9",
+  "httpx>=0.27",
+  # Document rules and names
+  "python-stdnum>=2.0",
+  "indic-namematch==0.1.0",
+  # Vision (OpenCV 4.x: wechat_qrcode, FaceDetectorYN and FaceRecognizerSF APIs)
+  "opencv-contrib-python-headless>=4.10,<5",
+  "numpy>=1.26",
+  "pillow>=10.4",
+  "onnxruntime>=1.18",
+  "pdqhash>=0.2.8",
+  "imagehash>=4.3",
+  # Aadhaar QR signature
+  "cryptography>=43",
+  # OCR
+  "boto3>=1.34",
+  "amazon-textract-textractor>=1.8",
+]
+
+[dependency-groups]
+dev = [
+  "pytest>=8.3",
+  "pytest-asyncio>=0.24",
+  "ruff>=0.6",
+]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/pehchaan"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+asyncio_mode = "auto"
+
+[tool.ruff]
+line-length = 120
+target-version = "py311"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "B", "UP", "S", "SIM", "ASYNC"]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/**" = ["S101"]
+"src/pehchaan/domain/reasons.py" = ["E501"]
