@@ -74,14 +74,28 @@ class RegistrationForm(BaseModel):
     name: str
     dob: date | None = None
     email: str | None = None
+    email_verified: bool = False  # Hackingly confirmed control of this address (OTP/link)
     phone: str | None = None
     institution: str | None = None
+
+
+class CaptureSource(StrEnum):
+    CAMERA = "camera"  # captured live in the browser
+    UPLOAD = "upload"
+    UNKNOWN = "unknown"
+
+
+class Capture(BaseModel):
+    id_source: CaptureSource = CaptureSource.UNKNOWN
+    selfie_source: CaptureSource = CaptureSource.UNKNOWN
 
 
 class VerificationPayload(BaseModel):
     registration_id: str = Field(min_length=1, max_length=128)
     event_id: str = Field(min_length=1, max_length=128)
     form: RegistrationForm
+    capture: Capture = Field(default_factory=Capture)
+    device_id: str | None = Field(default=None, max_length=128, description="e.g. FingerprintJS visitorId")
     textract_response: dict[str, Any] | None = None
 
 
@@ -101,6 +115,7 @@ class ExtractedFields(BaseModel):
     valid_until: date | None = None
     dob_source: FieldSource | None = None
     confidence: dict[str, float] = Field(default_factory=dict)
+    boxes: dict[str, tuple[float, float, float, float]] = Field(default_factory=dict, exclude=True, repr=False)
 
     @property
     def id_last4(self) -> str | None:
@@ -145,11 +160,35 @@ class DocumentSummary(BaseModel):
     age_on_event_date: int | None = None
 
 
+class ReviewAction(StrEnum):
+    APPROVE = "approve"
+    REJECT = "reject"
+    REQUEST_RETAKE = "request_retake"
+
+
+REVIEW_DECISIONS = {
+    ReviewAction.APPROVE: Decision.VERIFIED,
+    ReviewAction.REJECT: Decision.NOT_ELIGIBLE,
+    ReviewAction.REQUEST_RETAKE: Decision.ACTION_REQUIRED,
+}
+
+
+class ReviewRequest(BaseModel):
+    action: ReviewAction
+    reviewer: str = Field(min_length=1, max_length=80)
+    note: str = Field(default="", max_length=500)
+
+
+class ReviewRecord(ReviewRequest):
+    reviewed_at: datetime
+
+
 class VerificationResult(BaseModel):
     verification_id: str
     registration_id: str
     event_id: str
-    decision: Decision
+    decision: Decision  # current decision; a reviewer may have changed it
+    automated_decision: Decision
     confidence: float
     evidence_level: EvidenceLevel
     reasons: list[Reason]
@@ -158,4 +197,21 @@ class VerificationResult(BaseModel):
     document: DocumentSummary
     policy_version: str
     checks: list[CheckResult]
+    review: ReviewRecord | None = None
+    latency_ms: int = 0
+    created_at: datetime
+
+
+class VerificationSummary(BaseModel):
+    verification_id: str
+    registration_id: str
+    event_id: str
+    decision: Decision
+    automated_decision: Decision
+    confidence: float
+    evidence_level: EvidenceLevel
+    flags: Flags
+    document: DocumentSummary
+    reviewed: bool
+    top_reason: str | None
     created_at: datetime

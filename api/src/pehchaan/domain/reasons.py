@@ -47,6 +47,14 @@ CATALOG: dict[str, ReasonSpec] = {
         "This looks like a photo of a screen. Photograph the physical card or upload your e-Aadhaar PDF.",
         Action.USE_ORIGINAL_DOCUMENT,
     ),
+    "PDF_UNREADABLE": R(
+        Effect.ACTION,
+        "We couldn't open this PDF. Upload a photo of your card, or the e-Aadhaar PDF with its password removed.",
+        Action.RETAKE_ID_PHOTO,
+    ),
+    "IMAGE_UNREADABLE": R(
+        Effect.ACTION, "We couldn't read this file as an image. Upload a JPEG or PNG photo.", Action.RETAKE_ID_PHOTO
+    ),
     # Extraction
     "FIELDS_UNREADABLE": R(
         Effect.ACTION,
@@ -65,6 +73,14 @@ CATALOG: dict[str, ReasonSpec] = {
     # Aadhaar Secure QR
     "AADHAAR_QR_VERIFIED": R(Effect.INFO, "The Aadhaar QR code carries a valid UIDAI signature and matches the card."),
     "AADHAAR_QR_NOT_FOUND": R(Effect.INFO, "No Aadhaar QR code could be read from this photo."),
+    "AADHAAR_QR_REQUIRED": R(
+        Effect.ACTION,
+        "This event checks the QR code on your Aadhaar. Photograph the card so the QR code is fully visible and sharp, or upload your e-Aadhaar PDF.",
+        Action.RETAKE_ID_PHOTO,
+    ),
+    "AADHAAR_QR_MISSING_AFTER_RETAKE": R(
+        Effect.REVIEW, "The Aadhaar QR code still couldn't be read after a retake, so a person will check the card."
+    ),
     "AADHAAR_QR_SIGNATURE_INVALID": R(Effect.REVIEW, "The Aadhaar QR code's signature could not be validated."),
     "AADHAAR_PRINT_CONTRADICTS_QR": R(
         Effect.REJECT, "The {field} printed on the card differs from the UIDAI-signed QR code.", strength=0.95
@@ -72,6 +88,16 @@ CATALOG: dict[str, ReasonSpec] = {
     "AADHAAR_PHOTO_MISMATCH_QR": R(
         Effect.REVIEW, "The photo on the card doesn't match the photo in the signed QR code."
     ),
+    "AADHAAR_PRINT_QR_MISMATCH": R(
+        Effect.REVIEW, "The {field} read from the card differs from the signed QR code (it may be a misread)."
+    ),
+    "AADHAAR_QR_LEGACY_UNSIGNED": R(
+        Effect.INFO, "This is an older, unsigned Aadhaar QR code, so it can't prove the card."
+    ),
+    "AADHAAR_QR_CERT_MISSING": R(
+        Effect.INFO, "No UIDAI certificate is configured, so the QR signature wasn't checked."
+    ),
+    "AADHAAR_QR_UNREADABLE": R(Effect.INFO, "A QR code was found but it isn't a readable Aadhaar Secure QR."),
     # Edit and recapture signals
     "TAMPER_SUSPECTED_FIELD": R(Effect.REVIEW, "Possible edit in the {field} area."),
     "EDITING_SOFTWARE_METADATA": R(Effect.REVIEW, "The image was saved by editing software ({software})."),
@@ -90,13 +116,27 @@ CATALOG: dict[str, ReasonSpec] = {
         "The face on this ID appears in another registration with a different ID.",
         flag="duplicate_suspected",
     ),
-    "SAME_PERSON_KNOWN": R(Effect.INFO, "This person has verified this ID before."),
+    "DUPLICATE_LATER_REGISTRATION": R(
+        Effect.REVIEW,
+        "A later registration used the same ID, photo or face under a different name.",
+        flag="duplicate_suspected",
+    ),
+    "SAME_PERSON_KNOWN": R(Effect.INFO, "This person has used this ID before under the same name."),
+    "DEVICE_SHARED_BY_MANY": R(
+        Effect.REVIEW,
+        "This device was used to register {count} different identities.",
+        flag="duplicate_suspected",
+    ),
+    "DUPLICATE_INDEX_UNAVAILABLE": R(Effect.REVIEW, "The duplicate check couldn't run, so a person will look at this."),
     # Identity match
     "NAME_MATCH": R(Effect.INFO, "The name on the ID matches the registration."),
     "NAME_PARTIAL_MATCH": R(Effect.REVIEW, "The name on the ID only partly matches the registration ({detail})."),
     "NAME_MISMATCH": R(Effect.REVIEW, "The name on the ID doesn't match the registration."),
     "DOB_MISMATCH_FORM": R(Effect.REVIEW, "The date of birth on the ID differs from the registration form."),
     "EMAIL_DOMAIN_MATCHES_INSTITUTION": R(Effect.INFO, "The college email domain matches the institution."),
+    "VERIFIED_COLLEGE_EMAIL": R(
+        Effect.INFO, "The participant has confirmed a college email address at this institution."
+    ),
     "INSTITUTION_NOT_RECOGNISED": R(Effect.PENALTY, "The institution wasn't found in the AISHE registry."),
     # Selfie
     "SELFIE_MATCH": R(Effect.INFO, "The selfie matches the photo on the ID."),
@@ -105,6 +145,13 @@ CATALOG: dict[str, ReasonSpec] = {
         Effect.ACTION, "The selfie looks like a photo of a photo or screen. Take a live selfie.", Action.RETAKE_SELFIE
     ),
     "SELFIE_REQUIRED": R(Effect.ACTION, "This event needs a selfie to confirm it's you.", Action.RETAKE_SELFIE),
+    "SELFIE_NO_FACE": R(
+        Effect.ACTION, "We couldn't find a face in the selfie. Face the camera in good light.", Action.RETAKE_SELFIE
+    ),
+    "SELFIE_NOT_LIVE_CAPTURE": R(
+        Effect.PENALTY, "The selfie was uploaded as a file rather than taken with the camera."
+    ),
+    "SELFIE_NO_REFERENCE": R(Effect.INFO, "There was no clear photo on the ID to compare the selfie with."),
     # Eligibility
     "AGE_ELIGIBLE": R(Effect.INFO, "Age {age} on the event date is within the event's limits."),
     "AGE_BELOW_MIN_CONFIRMED": R(

@@ -16,11 +16,13 @@ from pehchaan.pipeline.context import VerificationContext
 EVENT_DATE = date(2026, 9, 18)
 
 
-def make_ctx(policy: EventPolicy, form_dob: date | None = None, **fields: object) -> VerificationContext:
+def make_ctx(
+    policy: EventPolicy, form_dob: date | None = None, form_name: str = "Asha Rao", **fields: object
+) -> VerificationContext:
     payload = VerificationPayload(
         registration_id="reg_1",
         event_id=policy.event_id,
-        form=RegistrationForm(name="Asha Rao", dob=form_dob),
+        form=RegistrationForm(name=form_name, dob=form_dob),
     )
     return VerificationContext(
         payload=payload,
@@ -41,5 +43,6 @@ def consistent_ledger() -> list[CheckResult]:
         result("quality"),
         result("extract"),
         result("document_rules"),
+        result("duplicates"),
         result("identity", CheckStatus.PASS, "NAME_MATCH"),
     ]

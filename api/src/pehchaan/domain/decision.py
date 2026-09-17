@@ -21,10 +21,11 @@ from pehchaan.domain.models import (
 from pehchaan.domain.policy import EventPolicy
 from pehchaan.domain.reasons import CATALOG, render
 
-# Checks that must PASS for a level to be reached. Levels are cumulative.
+# Checks that must PASS for a level to be reached. Levels are cumulative, and a check that
+# was skipped or couldn't run never counts: "if a check can't run, flag it, don't skip it".
 LEVEL_REQUIREMENTS: tuple[tuple[EvidenceLevel, frozenset[str]], ...] = (
     (EvidenceLevel.READ, frozenset({"extract"})),
-    (EvidenceLevel.CONSISTENT, frozenset({"document_rules", "identity"})),
+    (EvidenceLevel.CONSISTENT, frozenset({"document_rules", "identity", "duplicates"})),
     (EvidenceLevel.PROVEN, frozenset({"aadhaar_qr"})),
     (EvidenceLevel.PRESENT, frozenset({"selfie"})),
 )

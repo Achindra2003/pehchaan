@@ -21,6 +21,8 @@ class EventRules(BaseModel):
     accepted_documents: frozenset[DocType] = ALL_DOCUMENTS
     require_selfie: bool = False
     auto_verify_min_level: EvidenceLevel = EvidenceLevel.CONSISTENT
+    # With an age rule, an Aadhaar is only trusted for its DOB when its signed QR is readable.
+    require_aadhaar_qr: bool = True
     guardian_consent_under: int = 18
 
     @model_validator(mode="after")

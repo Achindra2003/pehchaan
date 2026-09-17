@@ -29,7 +29,8 @@ htmlcov/
 dist/
 build/
 
-# Local databases
+# Local data: databases, generated dev secrets, encrypted uploads
+api/data/
 *.db
 *.sqlite3
 

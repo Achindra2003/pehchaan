@@ -36,7 +36,7 @@ class DocumentRulesCheck(Check):
             case DocType.PAN:
                 findings.append(self._format(pan.is_valid(number), label))
                 if pan.is_valid(number):
-                    findings += self._pan_holder(number, fields.name)
+                    findings += self._pan_holder(number, f"{fields.name or ''} {ctx.payload.form.name}")
             case DocType.VOTER_ID:
                 findings.append(self._format(epic.is_valid(number), label))
             case DocType.PASSPORT:

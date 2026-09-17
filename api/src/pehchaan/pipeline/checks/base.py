@@ -25,8 +25,9 @@ class Check(ABC):
     def result(self, status: CheckStatus, *findings: Finding, **details: object) -> CheckResult:
         return CheckResult(check=self.name, status=status, findings=list(findings), details=details)
 
-    def not_implemented(self) -> CheckResult:
-        return self.result(CheckStatus.SKIPPED, note="not implemented yet")
+    @staticmethod
+    def result_for(name: str, status: CheckStatus, findings: list[Finding], details: dict) -> CheckResult:
+        return CheckResult(check=name, status=status, findings=findings, details=details)
 
 
 def finding(code: str, **params: str | int | float) -> Finding:

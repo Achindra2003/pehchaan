@@ -79,7 +79,53 @@ Everything here is sourced. Items we could not confirm are marked **unverified**
 - None of them are **event-eligibility aware** (age on event date, student-only, accepted documents), and none can use **Hackingly's own cross-event participant graph**, the strongest duplicate signal available.
 - Pehchaan's position: purpose-built eligibility verification that costs a few paise of OCR where Hackingly already pays for Textract, and gets better with every event.
 
-## 6. Open items
+## 6. Modern practice and the open-source landscape
+
+### Standards we align with
+
+| Source | What it says | What we changed |
+|---|---|---|
+| **NIST SP 800-63A-4** (final, Jul 2025) | Evidence strength is FAIR / STRONG / SUPERIOR; SUPERIOR needs *cryptographically protected attributes verifiable via digital signature*. Validation methods include *cryptographic verification of the source and integrity of digital evidence*. Verification can use *confirmation code verification* (control of an email/phone) or automated biometric comparison; knowledge-based questions are prohibited | Evidence ladder mapped to evidence strength (L3 = cryptographic validation). College email control counts as verification for students |
+| NIST SP 800-63A-4, fraud controls | CSPs *SHALL implement technical controls to increase confidence that digital media is being produced by a genuine sensor*; fraud velocity checks, device fingerprinting, *communicate fraud events in real time to RPs*; document false accept/reject and biometric FMR 1:10,000 / FNMR 1:100 as performance targets; demographic performance no more than 25% worse than overall; red teaming | Selfies must come from a live camera capture, not a file upload; device velocity check; webhooks for fraud events; eval reports per-attack rates |
+| **ISO/IEC 30107-3** (presentation attack detection) | Report APCER (attacks accepted) and BPCER (genuine rejected) | Eval uses these names and definitions |
+| **CEN/TS 18099** (injection attack detection) | Passing PAD alone doesn't stop virtual cameras or hooked media streams; test injection separately | Capture source recorded; uploaded selfies never earn L4 |
+
+### UIDAI Aadhaar App: the production path
+
+UIDAI's Aadhaar App documentation (docs.uidai.gov.in) specifies **OpenID4VP** verification (cross-device QR and same-device app-to-app) returning an **SD-JWT verifiable credential** (also ISO 18013-5 mDoc):
+- Issuer `https://uidai.gov.in`, **ES256** signatures, keys from UIDAI's JWKS; holder key binding via `cnf` (EC P-256).
+- Selectively disclosable claims include `ResidentName`, `Dob`, `ResidentImage`, `MaskedUID`, `Gender` and **`AgeAbove18`**, `AgeAbove50`, `AgeAbove60`, `AgeAbove75`.
+- The resident performs **face authentication inside the Aadhaar App** before sharing.
+
+For an 18+ event, Pehchaan can ask for only `ResidentName` + `AgeAbove18`: cryptographic proof of age, face-authenticated presence, and no ID image or DOB ever stored. This is the strongest possible evidence (L4) with the least data, and it's where verification is heading. It requires OVSE onboarding with UIDAI, so the hackathon build implements the verifier contract and demonstrates it against a simulated wallet; the photo-of-ID path remains the universal fallback.
+
+### Open-source IDV platforms and what we learned
+
+| Project | What it is | Lesson taken |
+|---|---|---|
+| [Idswyft](https://dev.to/teamidswyft/i-built-an-open-source-identity-verification-platform-heres-what-i-learned-5fkn) | Self-hosted IDV: PaddleOCR, ELA + entropy + FFT tamper signals, MRZ/barcode cross-validation, active liveness, face match, deterministic decisions | *"If a check can't run, flag it—don't skip it"* (they once auto-passed tiny ID photos with no face embedding). *"OCR is way harder than face matching"*: 77% field accuracy on US licences with PaddleOCR. Front-vs-encoded-data cross-validation (our print-vs-signed-QR check) is their strongest tamper signal. ML engine in a separate container from the API. Colour-reflection liveness *"fell apart on real mobile phones"* |
+| [Self-Hosted KYC Verification Platform](https://github.com/PetrJoe/Self-Hosted-KYC-Verification-Platform) | FastAPI + PostgreSQL, Tesseract/PaddleOCR, FaceNet, Fernet at rest, MIT | Confirms the FastAPI + encrypted-at-rest pattern; early-stage, nothing to reuse |
+| [FaceOnLive OpenKYC](https://github.com/FaceOnLive/ID-Verification-OpenKYC) | Face recognition, liveness, ID recognition demos | Commercial SDKs behind the demos; license check needed, not adopted |
+| [Ballerine](https://github.com/ballerine-io/ballerine) | KYC/KYB workflows, rules, case management back office | Case-management UX reference for the organiser console |
+| [Marble](https://github.com/checkmarble/marble) | Open-core real-time fraud decision engine with rule builder and case manager | Rules as data, versioned; reason codes; case manager next to the engine |
+| [MOSIP Inji Verify](https://github.com/inji/inji-verify) | Open-source verifiable-credential QR verification (Indian-origin DPI) | Reference for VC verification UX and QR-embedded credentials |
+| [CompreFace](https://github.com/exadel-inc/CompreFace) | Apache-2.0 face recognition service (InsightFace/FaceNet backends) | Alternative if face volume grows; SFace in-process is enough for now |
+| [FingerprintJS v5](https://github.com/fingerprintjs/fingerprintjs) | MIT browser fingerprint library | Device ID for multi-accounting velocity checks (client-side, spoofable: a signal, not proof) |
+| Aadhaar/PAN OCR repos ([Aadhar-OCR](https://github.com/anujhsrsaini/Aadhar-OCR), [Aadhar-pan-extraction-system](https://github.com/jadhavmansi0536-svg/Aadhar-pan-extraction-system), [OCR-Identity-Cards](https://github.com/Lal4Tech/OCR-Identity-Cards)) | Tesseract + regex extraction; keyword-scored doc classification; O/0 and I/1 auto-correction | Same approach as our parser; we add positional character correction for PAN and checksum-guided candidate selection |
+
+### Datasets for testing forgery detection
+
+- [SIDTD](https://github.com/Oriolrt/SIDTD_Dataset): synthetic ID and travel documents with crop-and-move and inpainting forgeries.
+- [IDNet](https://arxiv.org/abs/2408.01690): 597,900 synthetic US/EU ID images with stealthier frauds.
+- [DocXPand-25k](https://github.com/quicksign/docxpand): synthetic ID generator for European templates.
+- FantasyID: public dataset of manipulated fantasy IDs, commercial use allowed.
+None cover Indian documents, so our eval generates Indian-layout SPECIMEN cards (Aadhaar-like, PAN-like, college ID) with the same attack types.
+
+### OCR landscape (2026)
+
+PaddleOCR (PP-OCRv5 and PaddleOCR-VL, 109 languages including Devanagari) is the most accurate free option; Surya is strong on layout; docTR is tunable. We run **RapidOCR** (PaddleOCR models on ONNX Runtime) locally as the fallback when Hackingly's Textract output isn't supplied: no GPU, no network, same models.
+
+## 7. Open items
 
 - [ ] Ask Hackingly for the **anonymised sample IDs** (the problem statement says they are available on request). Do this today.
 - [ ] Download the **UIDAI offline verification certificate** from an Indian network; test on a team member's e-Aadhaar.
@@ -88,6 +134,14 @@ Everything here is sourced. Items we could not confirm are marked **unverified**
 
 ## Sources
 
+- [NIST SP 800-63A-4](https://pages.nist.gov/800-63-4/sp800-63a.html) · [NIST SP 800-63-4 release](https://www.nist.gov/publications/nist-sp-800-63a-4digital-identity-guidelines-identity-proofing-and-enrollment)
+- [CEN/TS 18099 overview (iProov)](https://www.iproov.com/blog/cen-ts-18099-standard-proves-injection-attack-resilience) · [Injection attack detection standards (Signzy)](https://www.signzy.com/blogs/injection-attack-detection)
+- [UIDAI Aadhaar App docs](https://docs.uidai.gov.in/) · [Aadhaar SD-JWT spec](https://docs.uidai.gov.in/readme/verifiable-credential-specifications/aadhaar-sd-jwt-specifications) · [OpenID4VP cross-device flow](https://docs.uidai.gov.in/readme/app-to-app-credential-flows/openid4vp-specifications/openid4vp-cross-device-flow) · [ISO 18013-5 Aadhaar mDoc](https://docs.uidai.gov.in/readme/verifiable-credential-specifications/iso-18013-5-aadhaar-mdoc-specs)
+- [Idswyft lessons](https://dev.to/teamidswyft/i-built-an-open-source-identity-verification-platform-heres-what-i-learned-5fkn) · [Self-Hosted KYC Platform](https://github.com/PetrJoe/Self-Hosted-KYC-Verification-Platform) · [OpenKYC](https://github.com/FaceOnLive/ID-Verification-OpenKYC)
+- [Marble](https://github.com/checkmarble/marble) · [MOSIP Inji Verify](https://github.com/inji/inji-verify) · [CompreFace](https://github.com/exadel-inc/CompreFace) · [InsightFace](https://github.com/deepinsight/insightface) · [FingerprintJS v5 MIT](https://fingerprint.com/blog/fingerprintjs-version-5-0-mit-license/)
+- [SIDTD](https://github.com/Oriolrt/SIDTD_Dataset) · [IDNet](https://arxiv.org/abs/2408.01690) · [DocXPand](https://github.com/quicksign/docxpand) · [FantasyID](https://www.researchgate.net/publication/394080794_FantasyID_A_dataset_for_detecting_digital_manipulations_of_ID-documents)
+- [Open-source OCR tools 2026 (Unstract)](https://unstract.com/blog/best-opensource-ocr-tools/) · [Aadhar-OCR](https://github.com/anujhsrsaini/Aadhar-OCR) · [Aadhar-pan-extraction-system](https://github.com/jadhavmansi0536-svg/Aadhar-pan-extraction-system)
+- [Groq models](https://console.groq.com/docs/models)
 - [AIForge-Doc benchmark (arXiv 2602.20569)](https://arxiv.org/html/2602.20569v1)
 - [From Forgeries to Foundation Models: survey of ID document attack and detection (arXiv 2607.01442)](https://arxiv.org/html/2607.01442v1)
 - [DocTamper (CVPR 2023)](https://github.com/qcf-568/DocTamper)

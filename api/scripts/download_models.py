@@ -17,6 +17,11 @@ MODELS = {
     "face_recognition_sface_2021dec.onnx": "https://huggingface.co/opencv/face_recognition_sface/resolve/main/face_recognition_sface_2021dec.onnx",
     # MiniFASNet-V2 anti-spoofing (from minivision Silent-Face-Anti-Spoofing), Apache-2.0
     "minifasnet_v2.onnx": "https://huggingface.co/garciafido/minifasnet-v2-anti-spoofing-onnx/resolve/main/minifasnet_v2.onnx",
+    # OpenCV WeChat QR detector + super-resolution (opencv_3rdparty), Apache-2.0
+    **{
+        f"wechat/{name}": f"https://raw.githubusercontent.com/WeChatCV/opencv_3rdparty/wechat_qrcode/{name}"
+        for name in ("detect.prototxt", "detect.caffemodel", "sr.prototxt", "sr.caffemodel")
+    },
 }
 
 TARGET = Path(__file__).resolve().parents[1] / "models"
@@ -26,6 +31,7 @@ def main() -> int:
     TARGET.mkdir(exist_ok=True)
     for name, url in MODELS.items():
         path = TARGET / name
+        path.parent.mkdir(parents=True, exist_ok=True)
         if path.exists():
             print(f"skip     {name}")
             continue
