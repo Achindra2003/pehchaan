@@ -15,9 +15,27 @@ def tokens(name: str) -> list[str]:
     return [t.lower() for t in re.findall(r"[A-Za-z]+", name)]
 
 
+_OCR_CONFUSIONS = (("rn", "m"), ("vv", "w"), ("l", "i"), ("1", "i"), ("0", "o"), ("5", "s"))
+
+
+def _ocr_normalise(name: str) -> str:
+    """Collapse characters OCR engines confuse ('Iyer' read as 'lyer'). Applied to both sides."""
+    text = name.lower()
+    for wrong, right in _OCR_CONFUSIONS:
+        text = text.replace(wrong, right)
+    return text
+
+
 def name_score(a: str | None, b: str | None) -> float:
     if not a or not b:
         return 0.0
+    score = _raw_score(a, b)
+    if score < APPROVE_AT:
+        score = max(score, _raw_score(_ocr_normalise(a), _ocr_normalise(b)))
+    return score
+
+
+def _raw_score(a: str, b: str) -> float:
     ta, tb = tokens(a), tokens(b)
     if not ta or not tb:
         return 0.0

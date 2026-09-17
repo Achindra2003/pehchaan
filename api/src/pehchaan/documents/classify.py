@@ -16,6 +16,9 @@ ANCHORS: dict[DocType, list[tuple[re.Pattern[str], int]]] = {
         (re.compile(r"YEAR\s*OF\s*BIRTH"), 2),
         (re.compile(r"GOVERNMENT\s*OF\s*INDIA"), 1),
         (re.compile(r"(?<![A-Z])VID\s*:?"), 1),
+        # Weak front-of-card layout cues: abbreviated DOB label and a bare gender line
+        (re.compile(r"(?<![A-Z])DOB\s*[:/]"), 1),
+        (re.compile(r"(?m)^\s*(?:MALE|FEMALE|TRANSGENDER)\s*$"), 1),
     ],
     DocType.PAN: [
         (re.compile(r"INCOME\s*TAX\s*DEPARTMENT"), 3),
