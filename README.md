@@ -4,88 +4,76 @@
 
 Built for **PS-003 · Hackingly platform track**, AI Build Challenge, Bengaluru, 18 Sep 2026.
 
+## Results on 47 synthetic SPECIMEN samples ([eval/results.md](eval/results.md))
+
+| Genuine participants rejected | Attacks accepted | Genuine auto-verified | Expected decisions |
+|---|---|---|---|
+| **0%** (0/23) | **0%** (0/24) | 96% | 47/47 |
+
+Attacks covered: edited DOB, edited DOB with the QR hidden, same ID under a new name, forged QR signature, QR transplanted from another card, under-age, over-age, expired college ID, missing student proof, blurry photo, invalid ID number.
+
 ## Why it's different
 
-Generative models can now produce convincing Aadhaar and PAN cards, and vision-model forgery judges score at chance on AI-edited documents ([research](docs/RESEARCH.md#2-the-finding-that-shapes-the-whole-design-pixels-can-no-longer-be-trusted)). So Pehchaan **trusts what can't be faked**:
+Generative models can now produce convincing Aadhaar and PAN cards, and vision-model forgery judges score at chance on AI-edited documents ([research](docs/RESEARCH.md)). So Pehchaan **trusts what can't be faked**:
 
-1. **Signed**: the UIDAI signature inside the Aadhaar Secure QR, checked offline
-2. **Consistent**: form, OCR, QR, face, college email and institution registry must agree
-3. **Seen before**: the same ID, image or face under another identity, across every Hackingly event
+1. **Signed**: the UIDAI signature in the Aadhaar Secure QR, or a UIDAI-signed Aadhaar App credential
+2. **Consistent**: form, OCR, QR, face, college email and institution must agree
+3. **Seen before**: the same ID, image, face or device under another identity, across every Hackingly event
 4. **Pixels**: edit and recapture signals, which can only ask for review or a retake, never reject
 
-Every check writes evidence to a ledger; a deterministic, versioned policy engine turns it into one of `verified`, `action_required`, `needs_review` or `not_eligible`. AI reads, matches and explains. Rules decide.
+A deterministic, versioned policy engine turns the evidence into `verified`, `action_required`, `needs_review` or `not_eligible`. AI reads, matches and explains. Rules decide.
+
+## Three ways to verify
+
+| Evidence | Endpoint | Data kept |
+|---|---|---|
+| Photo or e-Aadhaar PDF | `POST /v1/verifications` | Image only while a human reviews it |
+| Pehchaan Pass (returning participant) | `POST /v1/verifications/pass` | Nothing new; milliseconds, no OCR |
+| Aadhaar App (OpenID4VP, SD-JWT) | `POST /v1/aadhaar-app/sessions` | Name + `AgeAbove18`; no DOB, no image |
 
 ## Docs
 
 | | |
 |---|---|
-| [Architecture](docs/ARCHITECTURE.md) | Evidence ladder, decisions, pipeline, API, data model, scale, business case |
+| [Business case](docs/BUSINESS.md) | Unit economics, revenue model, adoption path, build vs buy |
+| [Architecture](docs/ARCHITECTURE.md) | Evidence ladder, decisions, pipeline, API, data model |
 | [Security](docs/SECURITY.md) | Threat model, data handling, DPDP and Aadhaar compliance map |
-| [Research](docs/RESEARCH.md) | Sources, open-source components and licenses, competitors |
-| [Build plan](docs/BUILD_PLAN.md) | Workstreams, tonight vs venue, demo script |
-
-## Repo layout
-
-```
-api/                  FastAPI service (Python 3.11, uv)
-  src/pehchaan/
-    domain/           contracts, event policy, reason catalog, decision engine
-    pipeline/         orchestrator + checks (one module per check)
-    api/              HTTP routes, auth
-    store/            persistence (in-memory for now)
-  tests/
-  scripts/            model downloads
-web/                  participant capture page + organiser console (Vite, React, TS, Tailwind)
-eval/                 labelled dataset spec and metrics runner
-docs/
-```
+| [Research](docs/RESEARCH.md) | Standards, open-source landscape, licenses, sources |
+| [Build plan](docs/BUILD_PLAN.md) | Venue plan and demo script |
 
 ## Run it
 
 ```bash
-# API
 cd api
-cp ../.env.example .env          # set PEHCHAAN_API_KEYS
+cp ../.env.example .env                       # set PEHCHAAN_API_KEYS (key:tenant:role)
 uv sync
-uv run python scripts/download_models.py
-uv run uvicorn pehchaan.main:app --reload     # http://localhost:8000/docs
+uv run python scripts/download_models.py      # face, liveness and QR models
+uv run uvicorn pehchaan.main:app_factory --factory --reload   # http://localhost:8000/docs
 
-# Web
-cd web
-cp .env.example .env.local
-npm install
-npm run dev                                   # http://localhost:5173
-
-# Tests
-cd api && uv run pytest
+uv run pytest                                 # 74 tests, including end-to-end on specimen cards
+uv run python ../eval/run.py                  # regenerates eval/results.md
+uv run python scripts/loadtest.py             # throughput per process
 ```
 
-Try it:
-
 ```bash
-export PEHCHAAN_KEY=...   # one of PEHCHAAN_API_KEYS from api/.env
-
-curl -X PUT localhost:8000/v1/events/evt_demo/policy -H "X-API-Key: $PEHCHAAN_KEY" \
-  -H "Content-Type: application/json" -d '{"event_date":"2026-09-18","min_age":18}'
-
-curl -X POST localhost:8000/v1/verifications -H "X-API-Key: $PEHCHAAN_KEY" \
-  -F 'payload={"registration_id":"reg_1","event_id":"evt_demo","form":{"name":"Asha Rao","dob":"2004-05-11"}}' \
+export KEY=change-me-platform
+curl -X POST localhost:8000/v1/verifications -H "X-API-Key: $KEY" \
+  -F 'payload={"registration_id":"reg_1","event_id":"ai-build-challenge-blr","subject_id":"user_42",
+     "form":{"name":"Asha Rao","dob":"2004-05-11"},
+     "consent":{"accepted":true,"notice_version":"v1","accepted_at":"2026-09-18T10:00:00Z"}}' \
   -F id_image=@card.jpg
 ```
 
-## Status
+## What's built
 
-| Component | State |
+| Area | Built |
 |---|---|
-| API contract, event policies, idempotency, auth | ✅ |
-| Decision engine + reason catalog | ✅ tested |
-| Eligibility (age on event date, YOB-only cards, minors, student-only) | ✅ tested |
-| Document rules (Aadhaar Verhoeff, PAN, EPIC, passport) | ✅ tested |
-| Quality gate · Textract extraction · Aadhaar QR proof · duplicates · identity · selfie · tamper signals | 🚧 stubs with specs in `pipeline/checks/stubs.py` |
-| Persistence, audit log, webhooks | 🚧 |
-| Capture page, organiser console, reviewer copilot | 🚧 |
-| Eval runner | 🚧 |
+| Verification | Quality gate · Textract JSON / live Textract / local OCR · doc classification and parsing (Aadhaar, PAN, voter ID, passport MRZ, DL, college ID) · Aadhaar Secure QR signature · duplicate graph · identity match · selfie match + liveness · soft tamper signals · eligibility (age on event date, minors, student-only) |
+| Business | Tenants and roles · Pehchaan Pass issue, reuse, revocation · shadow mode with agreement stats · usage and cost metering · prioritised review queue · rules or LLM copilot · signed webhooks |
+| Privacy and security | Consent required · review-only image retention · erasure · encryption at rest · keyed ID hashes · hashed API keys · rate limits · hash-chained audit log · defusedxml · no PII echoed in errors |
+| Scale | Bounded queue with 429 backpressure · sync→async fallback · job polling · load test |
+| Not yet | Web capture page and organiser console · real UIDAI certificate/JWKS · Postgres/object storage · calibration on real photos |
 
 ## Data rules
 
-Real identity documents never enter git. `eval/data/private/` is ignored; synthetic cards carry a `SPECIMEN` watermark. Run `pre-commit install` once to get secret scanning on every commit.
+Real identity documents never enter git. Synthetic cards carry a `SPECIMEN` watermark and are signed with a local TEST key, never a UIDAI key. Run `pre-commit install` once for secret scanning.
