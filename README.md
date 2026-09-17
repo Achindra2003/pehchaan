@@ -63,10 +63,12 @@ cd api && uv run pytest
 Try it:
 
 ```bash
-curl -X PUT localhost:8000/v1/events/evt_demo/policy -H "X-API-Key: change-me-dev-key" \
+export PEHCHAAN_KEY=...   # one of PEHCHAAN_API_KEYS from api/.env
+
+curl -X PUT localhost:8000/v1/events/evt_demo/policy -H "X-API-Key: $PEHCHAAN_KEY" \
   -H "Content-Type: application/json" -d '{"event_date":"2026-09-18","min_age":18}'
 
-curl -X POST localhost:8000/v1/verifications -H "X-API-Key: change-me-dev-key" \
+curl -X POST localhost:8000/v1/verifications -H "X-API-Key: $PEHCHAAN_KEY" \
   -F 'payload={"registration_id":"reg_1","event_id":"evt_demo","form":{"name":"Asha Rao","dob":"2004-05-11"}}' \
   -F id_image=@card.jpg
 ```
