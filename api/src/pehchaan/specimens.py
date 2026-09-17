@@ -227,3 +227,76 @@ def photograph(card: Image.Image, rng: random.Random, *, blur: float = 0.0, qual
     buffer = io.BytesIO()
     photo.save(buffer, "JPEG", quality=quality)
     return buffer.getvalue()
+
+
+# --- Aadhaar App test wallet ------------------------------------------------------------------------
+
+
+def make_test_uidai_issuer(directory: Path):
+    """A TEST stand-in for UIDAI's SD-JWT issuer key, written as a JWKS file Pehchaan can be pointed at."""
+    import json as _json
+
+    from cryptography.hazmat.primitives.asymmetric import ec
+
+    from pehchaan import jose
+
+    directory.mkdir(parents=True, exist_ok=True)
+    key_path, jwks_path = directory / "test-uidai-issuer.key", directory / "uidai-jwks.json"
+    if key_path.exists() and jwks_path.exists():
+        key = serialization.load_pem_private_key(key_path.read_bytes(), password=None)
+    else:
+        key = ec.generate_private_key(ec.SECP256R1())
+        key_path.write_bytes(
+            key.private_bytes(
+                serialization.Encoding.PEM, serialization.PrivateFormat.PKCS8, serialization.NoEncryption()
+            )
+        )
+        jwk = {**jose.public_jwk(key.public_key()), "kid": jose.key_id(key.public_key()), "use": "sig", "alg": "ES256"}
+        jwks_path.write_text(_json.dumps({"keys": [jwk]}))
+    return key
+
+
+def issue_test_aadhaar_credential(issuer_key, holder_key, claims: dict) -> str:
+    """Issue an SD-JWT shaped like the Aadhaar App credential, every claim selectively disclosable."""
+    import hashlib
+    import json as _json
+    import secrets as _secrets
+    import time as _time
+
+    from pehchaan import jose
+
+    disclosures = [
+        jose.b64url(_json.dumps([_secrets.token_urlsafe(16), name, value], separators=(",", ":")).encode())
+        for name, value in claims.items()
+    ]
+    payload = {
+        "iss": "https://uidai.gov.in",
+        "iat": int(_time.time()),
+        "exp": int(_time.time()) + 3600,
+        "vct": "AadhaarCredential",
+        "_sd_alg": "sha-256",
+        "_sd": sorted(jose.b64url(hashlib.sha256(d.encode()).digest()) for d in disclosures),
+        "cnf": {"jwk": jose.public_jwk(holder_key.public_key())},
+    }
+    token = jose.sign(payload, issuer_key, typ="vc+sd-jwt", kid=jose.key_id(issuer_key.public_key()))
+    return token + "~" + "".join(f"{d}~" for d in disclosures)
+
+
+def present_test_credential(issued: str, disclose: set[str], holder_key, *, audience: str, nonce: str) -> str:
+    """What the Aadhaar App would post back: only the chosen disclosures, bound to this request."""
+    import hashlib
+    import json as _json
+    import time as _time
+
+    from pehchaan import jose
+
+    parts = issued.split("~")
+    chosen = [d for d in parts[1:] if d and _json.loads(jose.b64url_decode(d))[1] in disclose]
+    presented = parts[0] + "~" + "".join(f"{d}~" for d in chosen)
+    kb = {
+        "aud": audience,
+        "nonce": nonce,
+        "iat": int(_time.time()),
+        "sd_hash": jose.b64url(hashlib.sha256(presented.encode()).digest()),
+    }
+    return presented + jose.sign(kb, holder_key, typ="kb+jwt")

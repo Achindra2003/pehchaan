@@ -57,6 +57,12 @@ def evidence_level(results: dict[str, CheckResult]) -> EvidenceLevel:
             level = candidate
         else:
             break
+    # Evidence that arrives already proven (a Pehchaan Pass, an Aadhaar App credential) grants its level directly,
+    # but only through a check that passed and only when the identity check also passed.
+    if _passed(results, "identity"):
+        for result in results.values():
+            if result.status is CheckStatus.PASS and "grants_level" in result.details:
+                level = max(level, EvidenceLevel(result.details["grants_level"]))
     return level
 
 

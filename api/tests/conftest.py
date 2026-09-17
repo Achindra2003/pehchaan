@@ -9,9 +9,13 @@ from helpers import EVENT_DATE
 from pehchaan.config import Settings
 from pehchaan.domain.policy import EventPolicy
 from pehchaan.main import create_app
-from pehchaan.specimens import make_test_signing_key
+from pehchaan.specimens import make_test_signing_key, make_test_uidai_issuer
 
-API_KEY = "test-key"
+API_KEY = "test-key"  # hackingly admin
+PLATFORM_KEY = "platform-key"
+REVIEWER_KEY = "reviewer-key"
+RIVAL_KEY = "rival-key"  # a different tenant
+KEYS = f"{API_KEY}:hackingly:admin,{PLATFORM_KEY}:hackingly:platform,{REVIEWER_KEY}:hackingly:reviewer,{RIVAL_KEY}:rival:admin"
 
 
 @pytest.fixture
@@ -23,18 +27,21 @@ def policy() -> EventPolicy:
 def signing_dir(tmp_path_factory: pytest.TempPathFactory) -> Path:
     directory = tmp_path_factory.mktemp("certs")
     make_test_signing_key(directory)
+    make_test_uidai_issuer(directory)
     return directory
 
 
-def make_client(data_dir: Path, cert_dir: Path, ocr: str = "none") -> TestClient:
+def make_client(data_dir: Path, cert_dir: Path, ocr: str = "none", **overrides: object) -> TestClient:
     settings = Settings(
         env="test",
-        api_keys=API_KEY,
+        api_keys=KEYS,
         data_dir=data_dir,
         uidai_cert_path=cert_dir,
+        uidai_jwks_path=cert_dir / "uidai-jwks.json",
         ocr_provider=ocr,  # type: ignore[arg-type]
         seed_demo=True,
         web_dist=data_dir / "no-web",
+        **overrides,
     )
     return TestClient(create_app(settings))
 

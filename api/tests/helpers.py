@@ -14,6 +14,7 @@ from pehchaan.pipeline.checks.base import finding
 from pehchaan.pipeline.context import VerificationContext
 
 EVENT_DATE = date(2026, 9, 18)
+CONSENT = {"accepted": True, "notice_version": "hackingly-idv-2026-09", "accepted_at": "2026-09-17T10:00:00Z"}
 
 
 def make_ctx(

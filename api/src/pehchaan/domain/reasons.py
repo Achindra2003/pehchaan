@@ -184,6 +184,42 @@ CATALOG: dict[str, ReasonSpec] = {
         Effect.ACTION, "Your college ID expired on {valid_until}. Upload a current one.", Action.UPLOAD_COLLEGE_ID
     ),
     "COLLEGE_ID_VALIDITY_UNKNOWN": R(Effect.PENALTY, "The college ID's validity date couldn't be read."),
+    # Pehchaan Pass
+    "PASS_ACCEPTED": R(Effect.INFO, "A valid Pehchaan Pass from an earlier verification (L{level}) was used."),
+    "PASS_INVALID": R(
+        Effect.ACTION,
+        "Your saved verification couldn't be used. Please verify with your ID again.",
+        Action.RETAKE_ID_PHOTO,
+    ),
+    "PASS_EXPIRED": R(
+        Effect.ACTION, "Your saved verification has expired. Please verify with your ID again.", Action.RETAKE_ID_PHOTO
+    ),
+    "PASS_REVOKED": R(Effect.REVIEW, "This Pehchaan Pass was revoked, so a person will check this registration."),
+    "PASS_SUBJECT_MISMATCH": R(Effect.REVIEW, "This Pehchaan Pass belongs to a different account."),
+    "PASS_LEVEL_TOO_LOW": R(
+        Effect.ACTION,
+        "This event needs stronger verification than your saved pass provides. Please verify with your ID.",
+        Action.RETAKE_ID_PHOTO,
+    ),
+    "PASS_NOT_ACCEPTED": R(
+        Effect.ACTION,
+        "This event doesn't accept saved verifications. Please verify with your ID.",
+        Action.RETAKE_ID_PHOTO,
+    ),
+    # Aadhaar App (OpenID4VP)
+    "AADHAAR_APP_VERIFIED": R(
+        Effect.INFO, "Identity shared from the Aadhaar App with a valid UIDAI signature after face authentication."
+    ),
+    "AADHAAR_APP_INVALID": R(
+        Effect.ACTION,
+        "We couldn't verify the Aadhaar App response. Try again, or upload your ID.",
+        Action.RETAKE_ID_PHOTO,
+    ),
+    "AADHAAR_APP_CLAIM_MISSING": R(
+        Effect.ACTION,
+        "The Aadhaar App didn't share the details this event needs ({claims}). Share them, or upload your ID.",
+        Action.RETAKE_ID_PHOTO,
+    ),
     # Engine
     "CHECK_ERROR": R(Effect.REVIEW, "An automatic check ({check}) couldn't finish, so a person will look at this."),
     "LEVEL_BELOW_EVENT_MINIMUM": R(Effect.REVIEW, "There isn't enough evidence to verify automatically."),

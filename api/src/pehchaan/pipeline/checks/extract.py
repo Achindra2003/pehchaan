@@ -52,15 +52,20 @@ class ExtractCheck(Check):
             doc_type = DocType.AADHAAR
         fields = extract_fields(ocr, doc_type) if ocr else ctx.fields.model_copy(update={"doc_type": doc_type})
 
+        query_pages = 0
         if ocr and self._textract and self._use_queries and (wanted := missing_queries(fields)):
             try:
                 ocr.queries |= await asyncio.to_thread(self._textract.query, to_jpeg(ctx.image), wanted)
                 fields = extract_fields(ocr, doc_type)
+                query_pages = 1
             except Exception as exc:  # Textract outage must not block the participant
                 logger.warning("textract queries failed: %s", type(exc).__name__)
 
         ctx.fields = self._merge_signed_qr(ctx, fields)
-        return self._assess(ctx, ocr, scores)
+        result = self._assess(ctx, ocr, scores)
+        result.details["textract_detect_pages"] = int(bool(ocr) and ocr.provider == "textract")
+        result.details["textract_query_pages"] = query_pages
+        return result
 
     def _ocr(self, ctx: VerificationContext) -> OcrResult | None:
         if ctx.payload.textract_response:

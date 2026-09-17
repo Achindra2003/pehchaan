@@ -63,8 +63,18 @@ class Action(StrEnum):
 class FieldSource(StrEnum):
     FORM = "form"
     OCR = "ocr"
-    QR_SIGNED = "qr_signed"
+    QR_SIGNED = "qr_signed"  # UIDAI Secure QR, signature verified
+    AADHAAR_VC = "aadhaar_vc"  # Aadhaar App verifiable credential, signature verified
     VISION_MODEL = "vision_model"
+
+
+SIGNED_SOURCES = frozenset({FieldSource.QR_SIGNED, FieldSource.AADHAAR_VC})
+
+
+class EvidenceSource(StrEnum):
+    DOCUMENT = "document"  # photo or PDF of an ID
+    PASS = "pass"  # noqa: S105 - Pehchaan Pass from an earlier verification
+    AADHAAR_APP = "aadhaar_app"  # OpenID4VP presentation from the Aadhaar App
 
 
 # --- Inputs -----------------------------------------------------------------
@@ -90,13 +100,32 @@ class Capture(BaseModel):
     selfie_source: CaptureSource = CaptureSource.UNKNOWN
 
 
-class VerificationPayload(BaseModel):
+class Consent(BaseModel):
+    """DPDP notice and consent captured by Hackingly before the ID is uploaded."""
+
+    accepted: bool
+    notice_version: str = Field(min_length=1, max_length=40)
+    accepted_at: datetime
+
+
+class RegistrationBase(BaseModel):
     registration_id: str = Field(min_length=1, max_length=128)
     event_id: str = Field(min_length=1, max_length=128)
     form: RegistrationForm
+    consent: Consent | None = None
+    subject_id: str | None = Field(
+        default=None, max_length=128, description="Hackingly account id; enables Pehchaan Pass issue and reuse"
+    )
+
+
+class VerificationPayload(RegistrationBase):
     capture: Capture = Field(default_factory=Capture)
     device_id: str | None = Field(default=None, max_length=128, description="e.g. FingerprintJS visitorId")
     textract_response: dict[str, Any] | None = None
+
+
+class PassVerificationRequest(RegistrationBase):
+    pass_token: str = Field(min_length=20, max_length=4096)
 
 
 # --- Pipeline state ---------------------------------------------------------
@@ -114,6 +143,7 @@ class ExtractedFields(BaseModel):
     institution: str | None = None
     valid_until: date | None = None
     dob_source: FieldSource | None = None
+    age_attestations: dict[int, bool] = Field(default_factory=dict)  # e.g. {18: True} from AgeAbove18
     confidence: dict[str, float] = Field(default_factory=dict)
     boxes: dict[str, tuple[float, float, float, float]] = Field(default_factory=dict, exclude=True, repr=False)
 
@@ -183,14 +213,44 @@ class ReviewRecord(ReviewRequest):
     reviewed_at: datetime
 
 
+class OutcomeRequest(BaseModel):
+    """What Hackingly's existing process decided, recorded while an event runs in shadow mode."""
+
+    decision: Decision
+    source: str = Field(default="manual_check", max_length=40)
+
+
+class ObservedOutcome(OutcomeRequest):
+    recorded_at: datetime
+
+
+class Usage(BaseModel):
+    """Metered per verification: the basis for cost per verification and billing."""
+
+    ocr_provider: str | None = None
+    textract_detect_pages: int = 0
+    textract_query_pages: int = 0
+    compute_ms: int = 0
+    estimated_cost_usd: float = 0.0
+
+
+class PassIssued(BaseModel):
+    pass_id: str
+    token: str
+    level: EvidenceLevel
+    expires_at: datetime
+
+
 class VerificationResult(BaseModel):
     verification_id: str
     registration_id: str
     event_id: str
     decision: Decision  # current decision; a reviewer may have changed it
     automated_decision: Decision
+    enforced: bool = True  # False while the event runs in shadow mode
     confidence: float
     evidence_level: EvidenceLevel
+    evidence_source: EvidenceSource = EvidenceSource.DOCUMENT
     reasons: list[Reason]
     actions: list[Action]
     flags: Flags
@@ -198,7 +258,12 @@ class VerificationResult(BaseModel):
     policy_version: str
     checks: list[CheckResult]
     review: ReviewRecord | None = None
+    observed_outcome: ObservedOutcome | None = None
+    consent_notice: str | None = None
+    usage: Usage = Field(default_factory=Usage)
+    pehchaan_pass: PassIssued | None = None  # returned once, never stored
     latency_ms: int = 0
+    erased_at: datetime | None = None
     created_at: datetime
 
 
@@ -212,6 +277,16 @@ class VerificationSummary(BaseModel):
     evidence_level: EvidenceLevel
     flags: Flags
     document: DocumentSummary
+    evidence_source: EvidenceSource
+    enforced: bool
     reviewed: bool
+    priority: int  # higher first in the review queue
     top_reason: str | None
     created_at: datetime
+
+
+class Job(BaseModel):
+    job_id: str
+    status: str  # queued, running, done, failed
+    verification_id: str | None = None
+    error: str | None = None

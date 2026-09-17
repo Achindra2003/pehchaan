@@ -3,7 +3,8 @@
 from __future__ import annotations
 
 import logging
-import threading
+import queue
+from contextlib import contextmanager
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -33,29 +34,45 @@ class Face:
 
 
 class FaceEngine:
-    def __init__(self, models_dir: Path) -> None:
+    def __init__(self, models_dir: Path, size: int = 4) -> None:
         import onnxruntime as ort
 
-        self._detector = cv2.FaceDetectorYN.create(str(models_dir / YUNET), "", (320, 320), 0.6, 0.3, 5000)
-        self._recognizer = cv2.FaceRecognizerSF.create(str(models_dir / SFACE), "")
-        self._liveness = ort.InferenceSession(str(models_dir / MINIFASNET), providers=["CPUExecutionProvider"])
-        self._lock = threading.Lock()
+        # OpenCV DNN models aren't thread-safe: one detector/recogniser pair per concurrent verification.
+        self._pool: queue.Queue = queue.Queue()
+        for _ in range(max(1, size)):
+            self._pool.put(
+                (
+                    cv2.FaceDetectorYN.create(str(models_dir / YUNET), "", (320, 320), 0.6, 0.3, 5000),
+                    cv2.FaceRecognizerSF.create(str(models_dir / SFACE), ""),
+                )
+            )
+        options = ort.SessionOptions()
+        options.intra_op_num_threads = 1
+        self._liveness = ort.InferenceSession(str(models_dir / MINIFASNET), options, providers=["CPUExecutionProvider"])
 
     @classmethod
-    def load(cls, models_dir: Path) -> FaceEngine | None:
+    def load(cls, models_dir: Path, size: int = 4) -> FaceEngine | None:
         missing = [name for name in (YUNET, SFACE, MINIFASNET) if not (models_dir / name).exists()]
         if missing:
             logger.warning("face models missing (%s); run scripts/download_models.py", ", ".join(missing))
             return None
-        return cls(models_dir)
+        return cls(models_dir, size)
+
+    @contextmanager
+    def _models(self):
+        models = self._pool.get()
+        try:
+            yield models
+        finally:
+            self._pool.put(models)
 
     def detect(self, image: np.ndarray) -> list[Face]:
         h, w = image.shape[:2]
         scale = min(1.0, 1280 / max(h, w))
         resized = cv2.resize(image, (round(w * scale), round(h * scale))) if scale < 1 else image
-        with self._lock:
-            self._detector.setInputSize((resized.shape[1], resized.shape[0]))
-            _, rows = self._detector.detect(resized)
+        with self._models() as (detector, _):
+            detector.setInputSize((resized.shape[1], resized.shape[0]))
+            _, rows = detector.detect(resized)
         faces = []
         for row in rows if rows is not None else []:
             scaled = row.copy()
@@ -64,9 +81,8 @@ class FaceEngine:
         return sorted(faces, key=lambda f: f.area, reverse=True)
 
     def embed(self, image: np.ndarray, face: Face) -> np.ndarray:
-        with self._lock:
-            aligned = self._recognizer.alignCrop(image, face.row)
-            feature = self._recognizer.feature(aligned)
+        with self._models() as (_, recognizer):
+            feature = recognizer.feature(recognizer.alignCrop(image, face.row))
         return _normalise(feature)
 
     def embed_portrait(self, image: np.ndarray) -> np.ndarray | None:
@@ -74,15 +90,14 @@ class FaceEngine:
         upscaled = cv2.resize(image, None, fx=3, fy=3, interpolation=cv2.INTER_CUBIC)
         if faces := self.detect(upscaled):
             return self.embed(upscaled, faces[0])
-        with self._lock:
-            feature = self._recognizer.feature(cv2.resize(image, (112, 112)))
+        with self._models() as (_, recognizer):
+            feature = recognizer.feature(cv2.resize(image, (112, 112)))
         return _normalise(feature)
 
     def liveness(self, image: np.ndarray, face: Face) -> float:
         crop = _liveness_crop(image, face.box, scale=2.7)
         tensor = (cv2.resize(crop, (80, 80)).astype(np.float32) / 255.0).transpose(2, 0, 1)[None]
-        with self._lock:
-            logits = self._liveness.run(None, {self._liveness.get_inputs()[0].name: tensor})[0][0]
+        logits = self._liveness.run(None, {self._liveness.get_inputs()[0].name: tensor})[0][0]
         probs = np.exp(logits - logits.max())
         probs /= probs.sum()
         return float(probs[LIVE_CLASS])

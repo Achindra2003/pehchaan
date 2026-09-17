@@ -5,6 +5,8 @@ from __future__ import annotations
 import logging
 from dataclasses import dataclass
 
+import cv2
+
 from pehchaan.aadhaar.secure_qr import CertificateStore
 from pehchaan.config import Settings
 from pehchaan.institutions import InstitutionRegistry
@@ -32,13 +34,14 @@ class Engines:
 
     @classmethod
     def load(cls, settings: Settings) -> Engines:
+        cv2.setNumThreads(2)  # verifications already run in parallel; avoid oversubscribing cores
         crypto = Crypto.from_settings(settings)
         store = Store(settings.data_dir / "pehchaan.db", crypto)
 
         textract = None
         if settings.ocr_provider in {"auto", "textract"} and settings.textract_enabled:
             textract = TextractClient(settings.aws_region)
-        rapid = RapidOcrEngine() if settings.ocr_provider in {"auto", "rapidocr"} else None
+        rapid = RapidOcrEngine(settings.ocr_workers) if settings.ocr_provider in {"auto", "rapidocr"} else None
 
         certificates = CertificateStore.load(settings.uidai_cert_path)
         if not certificates.available:
@@ -50,8 +53,8 @@ class Engines:
             settings=settings,
             crypto=crypto,
             store=store,
-            faces=FaceEngine.load(settings.models_dir),
-            qr=QrReader(settings.models_dir),
+            faces=FaceEngine.load(settings.models_dir, settings.workers),
+            qr=QrReader(settings.models_dir, settings.workers),
             certificates=certificates,
             textract=textract,
             rapid=rapid,

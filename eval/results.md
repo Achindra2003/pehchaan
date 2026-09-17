@@ -9,8 +9,8 @@
 | Genuine participants asked to retake or reviewed (friction) | 4% (1/23) |
 | Attacks accepted as verified (APCER) | **0% (0/24)** |
 | Decisions matching the expected outcome | 100% (47/47) |
-| Latency p50 / p95 (CPU, local OCR) | 1673 ms / 2434 ms |
-| Audit chain intact | True (55 entries) |
+| Latency p50 / p95 (CPU, local OCR) | 2065 ms / 3298 ms |
+| Audit chain intact | True (56 entries) |
 
 ## Attacks
 

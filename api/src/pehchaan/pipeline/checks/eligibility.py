@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from datetime import date
 
-from pehchaan.domain.models import CheckResult, CheckStatus, DocType, FieldSource, Finding
+from pehchaan.domain.models import SIGNED_SOURCES, CheckResult, CheckStatus, DocType, FieldSource, Finding
 from pehchaan.domain.policy import EventPolicy
 from pehchaan.pipeline.checks.base import Check, finding
 from pehchaan.pipeline.context import VerificationContext
@@ -51,6 +51,8 @@ class EligibilityCheck(Check):
             oldest = policy.event_date.year - fields.year_of_birth
             youngest = oldest - 1
             age = None
+        elif fields.age_attestations:
+            return None, self._attested(ctx)
         else:
             return None, [finding("AGE_UNKNOWN")] if has_age_rule else []
 
@@ -79,6 +81,25 @@ class EligibilityCheck(Check):
             findings.append(finding("AGE_ABOVE_MAX_CONFIRMED", age=shown_age, max_age=policy.max_age or ""))
         return age, findings
 
+    @staticmethod
+    def _attested(ctx: VerificationContext) -> list[Finding]:
+        """Signed 'age above N' claims (Aadhaar App AgeAbove18): proof of age without a date of birth."""
+        policy, attestations = ctx.policy, ctx.fields.age_attestations
+        findings: list[Finding] = []
+        adult = attestations.get(policy.guardian_consent_under)
+        if adult is False:
+            findings.append(finding("MINOR_GUARDIAN_CONSENT", under=policy.guardian_consent_under))
+        if policy.min_age is None and policy.max_age is None:
+            return findings
+        threshold = attestations.get(policy.min_age) if policy.min_age is not None else None
+        if policy.max_age is not None or threshold is None:
+            return [*findings, finding("AGE_UNKNOWN")]
+        if threshold:
+            return [*findings, finding("AGE_ELIGIBLE", age=f"{policy.min_age}+")]
+        if policy.event_date > date.today():  # attested "not yet 18" today; they may turn 18 before the event
+            return [*findings, finding("AGE_BOUNDARY_UNCERTAIN")]
+        return [*findings, finding("AGE_BELOW_MIN_CONFIRMED", age=f"under {policy.min_age}", min_age=policy.min_age)]
+
     def _student(self, ctx: VerificationContext) -> list[Finding]:
         fields = ctx.fields
         if fields.doc_type is not DocType.COLLEGE_ID:
@@ -99,7 +120,7 @@ class EligibilityCheck(Check):
     def _dob_confirmed(ctx: VerificationContext) -> bool:
         """A DOB is hard evidence only if it is UIDAI-signed, or read confidently AND matching the form."""
         fields = ctx.fields
-        if fields.dob_source is FieldSource.QR_SIGNED:
+        if fields.dob_source in SIGNED_SOURCES:
             return True
         return (
             fields.dob_source is FieldSource.OCR

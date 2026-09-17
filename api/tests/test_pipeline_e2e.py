@@ -8,11 +8,13 @@ from datetime import date
 
 import pytest
 from conftest import API_KEY
+from helpers import CONSENT
 
 from pehchaan import specimens as sp
 
 pytestmark = pytest.mark.e2e
 EVENT = "ai-build-challenge-blr"
+HEADERS = {"X-API-Key": API_KEY}
 
 
 @pytest.fixture(scope="module")
@@ -20,9 +22,17 @@ def key(signing_dir):
     return sp.make_test_signing_key(signing_dir)
 
 
-def submit(client, image: bytes, name: str, dob: date | str | None, registration: str, event: str = EVENT) -> dict:
+def submit(
+    client,
+    image: bytes,
+    name: str,
+    dob: date | str | None,
+    registration: str,
+    event: str = EVENT,
+    subject: str | None = None,
+) -> dict:
     form = {"name": name, **({"dob": str(dob)} if dob else {})}
-    body = {"registration_id": registration, "event_id": event, "form": form}
+    body = {"registration_id": registration, "event_id": event, "form": form, "consent": CONSENT, "subject_id": subject}
     response = client.post(
         "/v1/verifications",
         data={"payload": json.dumps(body)},
@@ -104,3 +114,60 @@ def test_student_event_accepts_current_college_id(ocr_client):
     )
     assert result["decision"] == "verified"
     assert result["document"]["type"] == "college_id"
+
+
+def test_verified_participant_reuses_a_pass_at_the_next_event(ocr_client, key):
+    rng = random.Random(7)
+    person = sp.make_person(rng, dob=date(2002, 2, 2))
+    photo = sp.photograph(sp.render_aadhaar(person, qr_payload=sp.secure_qr_for(person, key)), rng)
+    first = submit(ocr_client, photo, person.name, person.dob, "e2e-pass-first", subject="hackingly-user-77")
+    assert first["decision"] == "verified"
+    issued = first["pehchaan_pass"]
+    assert issued["level"] == 3
+    stored = ocr_client.get(f"/v1/verifications/{first['verification_id']}", headers=HEADERS).json()
+    assert stored["pehchaan_pass"] is None  # returned once, never stored
+
+    reuse = {
+        "registration_id": "e2e-pass-second",
+        "event_id": "junior-coders-13-17",
+        "form": {"name": person.name, "dob": str(person.dob)},
+        "consent": CONSENT,
+        "subject_id": "hackingly-user-77",
+        "pass_token": issued["token"],
+    }
+    second = ocr_client.post("/v1/verifications/pass", json=reuse, headers=HEADERS).json()
+    assert second["evidence_source"] == "pass"
+    assert second["decision"] == "not_eligible"  # 24 at a 13-17 event: the pass carries the signed DOB
+    assert second["usage"]["textract_detect_pages"] == 0
+
+    adult = {**reuse, "registration_id": "e2e-pass-third", "event_id": EVENT}
+    third = ocr_client.post("/v1/verifications/pass", json=adult, headers=HEADERS).json()
+    assert third["decision"] == "verified" and third["evidence_level"] == 3
+
+    stolen = {**adult, "registration_id": "e2e-pass-stolen", "subject_id": "someone-else"}
+    assert "PASS_SUBJECT_MISMATCH" in codes(
+        ocr_client.post("/v1/verifications/pass", json=stolen, headers=HEADERS).json()
+    )
+
+
+def test_pass_is_revoked_when_fraud_is_found_later(ocr_client, key):
+    rng = random.Random(8)
+    owner = sp.make_person(rng)
+    card = sp.render_aadhaar(owner, qr_payload=sp.secure_qr_for(owner, key))
+    first = submit(
+        ocr_client, sp.photograph(card, rng), owner.name, owner.dob, "e2e-revoke-owner", subject="user-owner"
+    )
+    token = first["pehchaan_pass"]["token"]
+    submit(ocr_client, sp.photograph(card, rng), "Farhan Ali", owner.dob, "e2e-revoke-impostor")
+
+    reuse = {
+        "registration_id": "e2e-revoke-reuse",
+        "event_id": EVENT,
+        "form": {"name": owner.name, "dob": str(owner.dob)},
+        "consent": CONSENT,
+        "subject_id": "user-owner",
+        "pass_token": token,
+    }
+    result = ocr_client.post("/v1/verifications/pass", json=reuse, headers=HEADERS).json()
+    assert result["decision"] == "needs_review"
+    assert "PASS_REVOKED" in codes(result)

@@ -37,6 +37,7 @@ STUDENT = "campus-hack-students"
 JUNIOR = "junior-coders-13-17"
 OPEN = "open-meetup"
 INSTITUTION = "Specimen Institute of Technology"
+CONSENT = {"accepted": True, "notice_version": "eval", "accepted_at": "2026-09-17T00:00:00Z"}
 
 
 @dataclass
@@ -269,12 +270,13 @@ def run() -> int:
     with TestClient(create_app(settings)) as client:
         client.put(f"/v1/events/{OPEN}/policy", json={"event_date": "2026-09-18"}, headers=HEADERS)
         warmup = sp.photograph(sp.render_pan(sp.make_person(random.Random(1)), "WARMP0000W"), random.Random(1))
-        client.post("/v1/verifications", data={"payload": json.dumps({"registration_id": "warmup", "event_id": OPEN, "form": {"name": "Warm Up"}})}, files={"id_image": ("w.jpg", warmup, "image/jpeg")}, headers=HEADERS)  # fmt: skip
+        client.post("/v1/verifications", data={"payload": json.dumps({"registration_id": "warmup", "event_id": OPEN, "form": {"name": "Warm Up"}, "consent": CONSENT})}, files={"id_image": ("w.jpg", warmup, "image/jpeg")}, headers=HEADERS)  # fmt: skip
         for sample in samples:
             body = {
                 "registration_id": sample.registration or sample.sample_id,
                 "event_id": sample.event,
                 "form": sample.form,
+                "consent": CONSENT,
             }
             response = client.post(
                 "/v1/verifications",

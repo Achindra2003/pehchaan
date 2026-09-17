@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from datetime import date
+from typing import Literal
 
 from pydantic import BaseModel, Field, model_validator
 
@@ -12,7 +13,7 @@ ALL_DOCUMENTS = frozenset(DocType) - {DocType.UNKNOWN}
 
 
 class EventRules(BaseModel):
-    """What the organiser sets. The service assigns event_id and version."""
+    """What the organiser sets. The service assigns event_id, tenant and version."""
 
     event_date: date
     min_age: int | None = Field(default=None, ge=0, le=120)
@@ -24,6 +25,10 @@ class EventRules(BaseModel):
     # With an age rule, an Aadhaar is only trusted for its DOB when its signed QR is readable.
     require_aadhaar_qr: bool = True
     guardian_consent_under: int = 18
+    # "shadow" records decisions without enforcing them, so false positives are measured before anyone is blocked.
+    mode: Literal["enforce", "shadow"] = "enforce"
+    accept_passes: bool = True
+    issue_passes: bool = True
 
     @model_validator(mode="after")
     def _check_age_window(self) -> EventRules:
@@ -34,6 +39,7 @@ class EventRules(BaseModel):
 
 class EventPolicy(EventRules):
     event_id: str
+    tenant: str = "default"
     version: int = 1
 
     @property
