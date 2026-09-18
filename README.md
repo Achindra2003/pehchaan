@@ -40,6 +40,8 @@ A deterministic, versioned policy engine turns the evidence into `verified`, `ac
 | [Security](docs/SECURITY.md) | Threat model, data handling, DPDP and Aadhaar compliance map |
 | [Research](docs/RESEARCH.md) | Standards, open-source landscape, licenses, sources |
 | [Walkthrough](docs/WALKTHROUGH.md) | How to run it, use the screens, call the API, and what happens inside |
+| [Playbook](docs/PLAYBOOK.md) | The day, hour by hour: what to build, what to say, what earns each 20 marks |
+| [Checklist](docs/CHECKLIST.md) | The printable version |
 | [Demo runbook](docs/DEMO.md) | One command, the four-case run, the questions to expect |
 | [Build state](docs/BUILD_PLAN.md) | What is built, what is untested |
 
