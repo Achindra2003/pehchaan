@@ -1,25 +1,41 @@
-import { useEffect, useState } from 'react'
-import { health } from './api/client'
+import { useState } from 'react'
+import Console from './components/Console'
+import Verify from './components/Verify'
 
-// Stream E builds two surfaces here:
-//   /capture  participant: on-device blur/glare/face guidance, upload, instant result with one-tap fixes
-//   /console  organiser: review queue, case view with evidence ledger, copilot summary, approve/reject
 export default function App() {
-  const [api, setApi] = useState<string>('checking…')
+  const [view, setView] = useState<'verify' | 'console'>(
+    window.location.hash === '#console' ? 'console' : 'verify',
+  )
 
-  useEffect(() => {
-    health()
-      .then((h) => setApi(`API ${h.status} · v${h.version}`))
-      .catch((error: Error) => setApi(error.message))
-  }, [])
+  function go(next: 'verify' | 'console') {
+    setView(next)
+    window.location.hash = next === 'console' ? '#console' : ''
+  }
 
   return (
-    <main className="mx-auto max-w-3xl px-4 py-12 font-sans text-slate-900">
-      <h1 className="text-4xl font-bold tracking-tight">
-        Pehchaan <span className="text-2xl font-medium text-slate-500">पहचान</span>
-      </h1>
-      <p className="mt-2 text-lg text-slate-600">Identity and eligibility verification for Hackingly registrations.</p>
-      <p className="mt-6 inline-block rounded-full bg-slate-100 px-3 py-1 font-mono text-sm">{api}</p>
-    </main>
+    <div className="mx-auto max-w-6xl px-4 py-6 md:py-10">
+      <header className="mb-6 flex flex-wrap items-center justify-between gap-4">
+        <div>
+          <h1 className="text-2xl font-bold tracking-tight md:text-3xl">
+            Pehchaan <span className="font-dev text-xl text-muted">पहचान</span>
+          </h1>
+          <p className="text-sm text-muted">Identity and eligibility verification for Hackingly registrations</p>
+        </div>
+        <nav className="flex rounded-lg border border-rule bg-sheet p-1">
+          {(['verify', 'console'] as const).map((tab) => (
+            <button
+              key={tab}
+              onClick={() => go(tab)}
+              className={`rounded-md px-4 py-2 text-sm font-medium ${
+                view === tab ? 'bg-accent text-white' : 'text-muted'
+              }`}
+            >
+              {tab === 'verify' ? 'Participant' : 'Organiser'}
+            </button>
+          ))}
+        </nav>
+      </header>
+      {view === 'verify' ? <Verify /> : <Console />}
+    </div>
   )
 }

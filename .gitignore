@@ -45,3 +45,10 @@ web/dist/
 .idea/
 .DS_Store
 Thumbs.db
+
+# Exported chat transcripts
+20*-*.txt
+
+# Generated demo samples
+api/demo-samples/
+api/demo-data/
