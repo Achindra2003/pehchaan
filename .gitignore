@@ -52,3 +52,7 @@ Thumbs.db
 # Generated demo samples
 api/demo-samples/
 api/demo-data/
+
+# Real credential file and any real government certificate — never commit
+api/.env
+api/certs/
