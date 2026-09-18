@@ -1,5 +1,14 @@
 # Evaluation
 
+```bash
+cd api
+uv run python ../eval/run.py                                        # synthetic SPECIMEN cards
+uv run python ../eval/run.py --labels ../eval/data/private/labels.csv --certs certs   # real samples
+```
+
+Both write `eval/results.md`. The real-sample run reads the images next to `labels.csv` and needs the real
+UIDAI certificate directory, so the signed-QR path is exercised for what it actually is.
+
 One command should print the numbers we show the judges:
 
 | Metric | Why it matters |

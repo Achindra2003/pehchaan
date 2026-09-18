@@ -18,13 +18,18 @@ Pehchaan handles government ID images, faces and minors' data. The design goal i
 | T10 | Data breach | Database dump | No raw ID numbers stored (HMAC + last 4 only); embeddings and names encrypted; images in a separate KMS-encrypted bucket with lifecycle deletion | Images within the retention window |
 | T11 | Tampering with decisions after the fact | Quietly flipping a rejection | Hash-chained, append-only audit log; decisions carry policy version and evidence snapshot | — |
 | T12 | False positives harming genuine students | Strict rules blocking initial-first names | Hard rejection only on hard evidence; soft signals → review; shadow mode before enforcement; FRR tracked per release | Reviewer backlog if signals are too noisy; tune on the eval set |
+| T13 | Stolen or shared Pehchaan Pass | A pass token passed to a friend | Bound to a keyed hash of the Hackingly account; the name must still match the form; revocable, and revoked automatically when the verification behind it is flagged | A pass used on the genuine owner's own account by someone else |
+| T14 | Replayed Aadhaar App presentation | Re-posting a captured SD-JWT | Per-session nonce, holder key binding over the exact disclosures, audience check, one-shot session, 10-minute expiry | — |
+| T15 | Forged capture provenance | Claiming an uploaded selfie was a live capture | Only the in-page camera capture is labelled `camera`; uploads never reach L4, and a future client can't upgrade itself by lying because the level follows the check, not the claim | A modified client can still send `camera`; device attestation (CEN/TS 18099) is the production answer |
+| T16 | One tenant reading another's data | An organiser key querying another organiser's registrations | Tenant on every row and every query; events belong to one tenant; cross-tenant fraud signals surface as a flag with no detail about the other registration | — |
 
 ## Data handling
 
 | Data | Stored? | How | Retention |
 |---|---|---|---|
-| ID image | Yes | Private bucket, SSE-KMS, signed URLs only | Event end + configurable window (default 30 days), then deleted |
-| Selfie | Yes, if provided | Same as ID image | Same as ID image |
+| ID image | **Only when a human must review it** (`image_storage=review_only`, the default) | Encrypted at rest (Fernet locally, SSE-KMS in production); served only to `view_images` roles, never cached, every view audited | Deleted the moment the review closes; otherwise swept after `image_retention_days` (30). `image_storage=all` keeps every image, `none` keeps nothing |
+| Selfie | Same as the ID image | Same as the ID image | Same as the ID image |
+| Consent record | Yes | Notice version and timestamp on the verification | With the decision record |
 | Aadhaar number | **Never in full** | Last 4 digits for display; `HMAC-SHA256(pepper, "aadhaar:" + number)` for duplicates | HMAC kept for fraud prevention; purpose disclosed in the notice |
 | Other ID numbers | Never in plain text | Last 4 + keyed HMAC | Same as above |
 | Aadhaar Secure QR data | **No** | Read in memory, verified, discarded (OVSE Secure QR mode is display-only) | — |
@@ -32,6 +37,10 @@ Pehchaan handles government ID images, faces and minors' data. The design goal i
 | Face embedding | Yes | Encrypted; tenant-scoped query | Deleted with the image |
 | Evidence ledger / decision | Yes | Codes, scores, timings; no raw PII in `details` | Audit period |
 | Application logs | Yes | Structured; **PII scrubbed**, no ID numbers, no images | 30 days |
+
+API keys are hashed (SHA-256) when the process starts and compared in constant time; the plaintext is never held
+in memory or logged. Each key carries a tenant and a role (`platform`, `reviewer`, `admin`) whose permissions are
+checked per endpoint, and each key has its own rate-limit bucket.
 
 Keys: the HMAC pepper and data-encryption keys live in a KMS (AWS KMS in production; environment variables only in local development). Rotating the pepper requires re-keying `identity_keys`, so it is versioned.
 

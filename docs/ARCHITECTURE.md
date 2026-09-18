@@ -158,6 +158,24 @@ selfie       <file, optional>
 - **Shadow mode first.** Pehchaan runs alongside the current flow and only records decisions; Hackingly compares against its manual outcomes, then switches enforcement on per event. That is how false positives are measured before a single student is affected.
 - **Verified once, trusted everywhere.** A participant verified at L3+ gets a signed Pehchaan pass bound to their Hackingly account (expires, revocable), so future events skip re-verification. Less friction, lower cost, and a reason for organisers to host on Hackingly.
 
+## 6b. Three ways evidence arrives
+
+The pipeline above is the document path. Two more paths reach the same decision engine, the same reason codes and the same audit log.
+
+| Path | How it works | Evidence level | What Pehchaan keeps |
+|---|---|---|---|
+| **Document** `POST /v1/verifications` | Photo or e-Aadhaar PDF through the full pipeline | Up to L4 | The image, only while a human is reviewing it |
+| **Pehchaan Pass** `POST /v1/verifications/pass` | An ES256 token issued after a verified registration, bound to a keyed hash of the Hackingly account, carrying name, DOB, level and student validity. Re-checked against this event's rules. Expires in 12 months (or when the college ID does) and is revoked automatically if the verification behind it is later flagged | The level it was issued at | Nothing new; no OCR, no image |
+| **Aadhaar App** `POST /v1/aadhaar-app/sessions` | OpenID4VP: the participant scans a QR, authenticates with their face in the app, and the app posts a UIDAI-signed SD-JWT. Pehchaan verifies the issuer signature, the disclosure digests and the holder key binding, and asks only for what the event needs (`ResidentName` + `AgeAbove18` for an 18+ event) | L4 when key-bound | Name and an age attestation. No DOB, no photo, no image |
+
+The pass is also the cost story: a returning participant costs no OCR and a few milliseconds, so verification gets cheaper for Hackingly with every event, not more expensive.
+
+## 6c. Tenants, roles and rollout
+
+- Every event, verification, job and audit entry belongs to a **tenant** (Hackingly's platform, or an organiser). API keys are hashed at startup and carry a tenant and a role: `platform` (submit and read), `reviewer` (queue, images, copilot), `admin` (everything, including usage and erasure).
+- The **duplicate graph spans tenants** because fraud does, but a conflict surfaces only as a flag: no detail about the other tenant's registration crosses the boundary.
+- An event can run in **shadow mode**: decisions are recorded and returned with `enforced: false`, Hackingly reports what its own process decided (`POST /v1/verifications/{id}/outcome`), and `GET /v1/stats` shows agreement, false rejections and missed fraud before anyone is blocked.
+
 ## 7. Data model
 
 | Table | Holds | Notes |

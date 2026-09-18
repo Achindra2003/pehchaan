@@ -1,70 +1,33 @@
-# Build plan
+# Build state and what's left
 
-The brief asks teams to arrive with ~80% built and finish, test and ship at the venue (18 Sep 2026, 3-hour sprint).
-Judged on: problem understanding · solution fit · working prototype · innovation / use of AI · feasibility and impact.
+The demo script lives in [DEMO.md](DEMO.md). This is what exists and what doesn't.
 
-## Today, before anything else
+## Built and tested
 
-- [ ] Email Hackingly for the **anonymised sample IDs**
-- [ ] AWS account with Textract access in `ap-south-1`; keys in `.env`
-- [ ] Download the **UIDAI offline verification certificate** (Indian network) into `api/certs/`
-- [ ] `cd api && uv run python scripts/download_models.py` (YuNet, SFace, MiniFASNet)
-- [ ] Collect consented test IDs from the team (e-Aadhaar PDF + photo of card, PAN, college ID, one selfie each) into `eval/data/private/`
+| Area | Detail |
+|---|---|
+| Reading | Quality gate (blur, glare, size, e-Aadhaar PDF with the password derived from name + year); Hackingly's Textract JSON, live Textract with Queries, or local RapidOCR; document classification and field parsing for Aadhaar, PAN, voter ID, passport MRZ, driving licence and college ID, with OCR character repair |
+| Proving | Aadhaar Secure QR decode and RSA/SHA-256 signature check; signed data compared with the printed card; Aadhaar App SD-JWT verification (issuer signature, disclosures, key binding) |
+| Catching | Duplicate graph (keyed ID hash, PDQ image hash, face embedding, device); identity match; selfie match with passive liveness; soft edit and recapture signals |
+| Deciding | Versioned event policy, reason catalog, evidence ladder, confidence; age on the event date, year-of-birth-only cards, signed age attestations, minors, student rules |
+| Running it | Tenants and roles, rate limits, bounded queue with backpressure, idempotency, signed webhooks, prioritised review queue, copilot, usage metering, hash-chained audit log, erasure, retention sweep |
+| Interfaces | Participant capture page with an on-device blur check and in-page camera selfie; organiser console with queue, evidence ledger, copilot and review actions |
+| Evidence | 77 tests, and `eval/run.py` over 47 SPECIMEN samples: 0 genuine rejected, 0 attacks accepted, 96% auto-verified |
 
-## Workstreams
+## Not done
 
-Every check implements the same interface (`Check.run(ctx) -> CheckResult`) and emits codes from `domain/reasons.py`, so the streams can be built in parallel without stepping on each other. Unbuilt checks live in `api/src/pehchaan/pipeline/checks/stubs.py` with their spec as the docstring; move each into its own module when you implement it.
+- **Never run on a real Aadhaar with the real UIDAI certificate.** This is the first thing to do at the venue.
+- **Face matching and liveness are untested on real faces**, including which class index MiniFASNet calls "live" (`LIVE_CLASS` in `vision/faces.py`). If a live selfie is called a spoof, set `PEHCHAAN_LIVENESS_ENABLED=false` rather than debug during a demo.
+- **Recapture (screen photo) detection is computed but disabled**; it needs a threshold calibrated on real photos of screens versus real cards (`moire_score` in the tamper check details).
+- **No AISHE institution registry file**, so unknown colleges aren't flagged. Drop a CSV at `data/aishe_colleges.csv` to turn it on.
+- **Aadhaar App runs against a test issuer**; production needs OVSE onboarding with UIDAI and their JWKS.
+- **Single process, SQLite.** About 27 verifications/minute per process; scale with more processes, Postgres and object storage. Multi-process throughput is unmeasured.
+- **No deployment.** Everything runs locally.
 
-| Stream | Scope | Where |
-|---|---|---|
-| **A. Core & API** | Persistence (SQLite), hash-chained audit log, signed webhooks | `pipeline/orchestrator.py`, `api/`, `store/` |
-| **B. Read** | Quality gate, Textract adapter (reuse JSON, Queries fallback), doc classification | `QualityCheck`, `ExtractCheck` → `checks/quality.py`, `checks/extract.py`, `adapters/textract.py` |
-| **C. Prove** | Aadhaar QR decode + signature + print/photo comparison; duplicate graph | `AadhaarQrCheck`, `DuplicatesCheck` |
-| **D. Match** | Name/DOB matching, institution + email domain, selfie match + anti-spoof, edit/recapture signals | `IdentityCheck`, `SelfieCheck`, `TamperCheck` |
-| **E. Experience** | Participant capture page (on-device guidance), organiser console (queue, case view, copilot), demo polish | `web/` |
+## At the venue, in order
 
-Already done and tested: contract, event policy, decision engine, reason catalog, `EligibilityCheck`, `DocumentRulesCheck`, API with auth and idempotency.
-
-## Tonight: the 80%
-
-Must work end to end on real images:
-
-1. **A** SQLite store replacing the in-memory one; hash-chained audit log
-2. **B** Quality gate; Textract read with Queries; doc type classification
-3. **C** Aadhaar Secure QR decode + signature verification + QR ↔ print comparison; HMAC duplicate check
-4. **D** Name + DOB match against the form
-5. **E** Capture page that uploads and shows the result; console list + case view with the evidence ledger
-6. **All** Eval set labelled (`eval/labels.csv`) and `eval/run.py` printing the metrics table
-
-## At the venue: the last 20%
-
-1. Selfie match + MiniFASNet anti-spoofing
-2. Edit/recapture signals (moiré, field-level noise, text-line geometry)
-3. Face and PDQ duplicate index
-4. Reviewer copilot summary
-5. On-device blur/glare guidance in the capture page
-6. Re-run eval, freeze numbers, rehearse the demo twice, deploy
-
-**Cut line if time runs short**: drop the copilot and on-device guidance before anything in the "tonight" list. A smaller system that is measurably right beats a bigger one that isn't.
-
-## Demo script (3 minutes)
-
-1. **Hook (20 s).** An AI-generated Aadhaar that looks perfect. "Vision models are at chance on these. So we don't trust pixels; we trust signatures, consistency and the graph."
-2. **Genuine student (30 s).** Phone photo of a real Aadhaar → `verified`, L3, 0.95, reasons shown, under 3 seconds.
-3. **Edited DOB (30 s).** Same card with the DOB edited → signed QR contradicts the print → `not_eligible` with the exact reason.
-4. **Reused ID (30 s).** Same ID under a different name → both registrations to review → console with evidence side by side and copilot summary.
-5. **Blurry photo (15 s).** → `action_required`: retake guidance, nobody rejected.
-6. **Minor (15 s).** → guardian consent flag.
-7. **Numbers and integration (40 s).** Eval table (FRR, catch rate per attack, auto-verify rate, latency, cost); one API call after Textract; shadow mode; verified pass across events; DPDP May 2027.
-
-## Eval set spec
-
-`eval/labels.csv`:
-
-```csv
-sample_id,file,selfie_file,event_policy,form_name,form_dob,expected_decision,attack
-g001,private/g001_aadhaar.jpg,,adult_open,Asha Rao,2004-05-11,verified,none
-a001,private/a001_dob_edit.jpg,,adult_open,Asha Rao,2004-05-11,not_eligible,edited_dob
-```
-
-Attacks to cover: `none`, `edited_dob`, `photo_swap`, `reused_id_new_name`, `screen_replay`, `synthetic_card`, `underage`, `expired_college_id`, `blurry`, `selfie_mismatch`.
+1. Real documents through the real certificate path: team e-Aadhaar PDFs, physical card photos, PAN, college IDs. Fix what the parser misses; tune the blur threshold if genuine photos get asked for retakes.
+2. Ask Hackingly for the anonymised sample IDs and run `eval/run.py --labels` over them.
+3. One live Textract call with AWS credentials, to show the same path Hackingly already pays for.
+4. A Groq key if you want the copilot summary written by an LLM instead of rules.
+5. Deploy somewhere judges can reach, or run the demo from the laptop with the reset step from DEMO.md.

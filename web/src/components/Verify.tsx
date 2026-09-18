@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import { listEvents, submitVerification } from '../api/client'
 import type { EventPolicy, VerificationResult } from '../api/types'
 import { checkCapture } from '../lib/quality'
+import SelfieCapture from './SelfieCapture'
 import { Card, DecisionBadge, Field, LevelLadder, ReasonList, inputClass } from './ui'
 
 const ACTION_LABEL: Record<string, string> = {
@@ -20,6 +21,7 @@ export default function Verify() {
   const [consent, setConsent] = useState(false)
   const [idImage, setIdImage] = useState<File | null>(null)
   const [selfie, setSelfie] = useState<File | null>(null)
+  const [selfieSource, setSelfieSource] = useState<'camera' | 'upload'>('upload')
   const [captureWarning, setCaptureWarning] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -60,8 +62,10 @@ export default function Verify() {
           subjectId: name.toLowerCase().replace(/\s+/g, '-'),
           idImage,
           selfie,
-          idFromCamera: Boolean(idInput.current?.getAttribute('capture')),
-          selfieFromCamera: true,
+          // A file input can't tell us whether the phone's camera or the gallery produced this, so we
+          // don't claim it did. Only the in-page camera capture below counts as a live capture.
+          idFromCamera: false,
+          selfieFromCamera: selfieSource === 'camera',
         }),
       )
     } catch (exc) {
@@ -118,15 +122,12 @@ export default function Verify() {
               required
             />
           </Field>
-          <Field label="Selfie (optional)">
-            <input
-              className={inputClass}
-              type="file"
-              accept="image/*"
-              capture="user"
-              onChange={(e) => setSelfie(e.target.files?.[0] ?? null)}
-            />
-          </Field>
+          <SelfieCapture
+            onCapture={(file, source) => {
+              setSelfie(file)
+              setSelfieSource(source)
+            }}
+          />
 
           {captureWarning && (
             <p className="rounded-lg bg-warn-soft px-3 py-2 text-sm text-warn">
