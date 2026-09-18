@@ -78,6 +78,37 @@ need to type anything or upload any file. One click = one full demo case.
 
 ---
 
+## PART 2.5 — Can you actually test a REAL ID? Yes. Here's exactly what happens.
+
+**Yes — you can upload a real Aadhaar, PAN, voter ID, or college ID right now, on this same screen, using the
+normal upload fields below the demo card buttons.** This is a real, working prototype. It is not locked to the
+fake cards.
+
+Here's exactly what to expect for each, so nobody is confused live:
+
+| Real document | What happens | Why |
+|---|---|---|
+| **PAN card** | Fully checked, shows **Verified** if the name matches and it's not a duplicate | No government signature involved at all — works completely out of the box |
+| **College ID** | Fully checked, shows **Verified** | Same — no signature dependency |
+| **Voter ID / passport** | Fully checked, shows **Verified** | Same |
+| **Real Aadhaar card** | Everything is read and checked correctly (name, date of birth, age, duplicates) — but it shows **"Needs review" instead of "Verified"** | The one part that needs a real government certificate is checking Aadhaar's hidden digital signature. We tried to download that certificate twice just now and the government site blocked/returned an error both times (not our code's fault — a network/access issue). **Without it, the system correctly refuses to fully trust a signature it can't check — it doesn't guess, it asks a human instead.** That's the system being careful, not broken. |
+
+**This is actually a good thing to show, not a weakness to hide.** If a real Aadhaar comes back "Needs review,"
+say exactly this:
+
+*"Notice it didn't just say 'Verified' — it read everything correctly, but it's honest that it can't
+cryptographically prove the government signature without being registered with UIDAI in production, so it sends
+it to a human rather than guessing. That's the same 'never trust a guess' philosophy from our whole design."*
+
+**That is a strong answer, not a weak one.** It proves the system does the right thing even when it's missing a
+piece — it doesn't fail open, it doesn't crash, it doesn't pretend.
+
+**Bottom line: test with real PAN cards / college IDs live if you want a guaranteed "Verified" on a real
+document. Test with a real Aadhaar too if you want — just narrate the "Needs review" result honestly using the
+line above, instead of being surprised by it.**
+
+---
+
 ## PART 3 — The exact demo, click by click (do this now, practice it twice)
 
 Do these in order. After each click, wait 1-3 seconds for the result to appear on the right side of the screen.
