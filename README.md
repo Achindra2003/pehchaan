@@ -49,7 +49,8 @@ A deterministic, versioned policy engine turns the evidence into `verified`, `ac
 cd api && uv sync
 uv run python scripts/download_models.py      # face, liveness and QR models
 cd ../web && npm install && npm run build     # the UI is served by the API
-cd ../api && uv run python scripts/demo.py    # everything on http://localhost:8000
+cd ../api && uv run python scripts/preflight.py  # what's ready, what each missing piece unlocks
+uv run python scripts/demo.py                 # everything on http://localhost:8000
 
 # or run them apart, with your own settings
 cp ../.env.example .env                       # PEHCHAAN_API_KEYS is key:tenant:role

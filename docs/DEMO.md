@@ -6,7 +6,8 @@ Four cases, about three minutes, one screen. Everything else (passes, Aadhaar Ap
 
 ```bash
 cd web && npm run build          # once, so the UI is served from the API
-cd ../api && uv run python scripts/demo.py
+cd ../api && uv run python scripts/preflight.py   # confirms models, certificate, build, keys
+uv run python scripts/demo.py
 ```
 
 That clears earlier registrations (so duplicates fire only when you want them), makes the demo cards if they
