@@ -85,6 +85,7 @@ export interface VerificationSummary {
 
 export interface EventPolicy {
   event_id: string
+  title: string
   event_date: string
   min_age: number | null
   max_age: number | null
@@ -114,4 +115,13 @@ export interface Copilot {
   summary: string
   suggested_action: 'approve' | 'reject' | 'request_retake' | 'investigate'
   source: 'llm' | 'rules'
+}
+
+export interface DemoSample {
+  file: string
+  label: string
+  name: string
+  dob: string
+  event: string
+  note: string
 }

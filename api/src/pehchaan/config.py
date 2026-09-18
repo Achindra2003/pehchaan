@@ -73,6 +73,7 @@ class Settings(BaseSettings):
     manual_review_minutes: float = 3.0
 
     seed_demo: bool = True
+    demo_samples_dir: Path = Path("demo-samples")
     web_dist: Path = Path("../web/dist")
 
 

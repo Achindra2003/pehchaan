@@ -39,18 +39,22 @@ A deterministic, versioned policy engine turns the evidence into `verified`, `ac
 | [Architecture](docs/ARCHITECTURE.md) | Evidence ladder, decisions, pipeline, API, data model |
 | [Security](docs/SECURITY.md) | Threat model, data handling, DPDP and Aadhaar compliance map |
 | [Research](docs/RESEARCH.md) | Standards, open-source landscape, licenses, sources |
-| [Build plan](docs/BUILD_PLAN.md) | Venue plan and demo script |
+| [Demo runbook](docs/DEMO.md) | One command, the four-case run, the questions to expect |
+| [Build state](docs/BUILD_PLAN.md) | What is built, what is untested |
 
 ## Run it
 
 ```bash
-cd api
-cp ../.env.example .env                       # set PEHCHAAN_API_KEYS (key:tenant:role)
-uv sync
+cd api && uv sync
 uv run python scripts/download_models.py      # face, liveness and QR models
+cd ../web && npm install && npm run build     # the UI is served by the API
+cd ../api && uv run python scripts/demo.py    # everything on http://localhost:8000
+
+# or run them apart, with your own settings
+cp ../.env.example .env                       # PEHCHAAN_API_KEYS is key:tenant:role
 uv run uvicorn pehchaan.main:app_factory --factory --reload   # http://localhost:8000/docs
 
-uv run pytest                                 # 74 tests, including end-to-end on specimen cards
+uv run pytest                                 # 77 tests, including end-to-end on specimen cards
 uv run python ../eval/run.py                  # regenerates eval/results.md
 uv run python scripts/loadtest.py             # throughput per process
 ```
@@ -72,7 +76,8 @@ curl -X POST localhost:8000/v1/verifications -H "X-API-Key: $KEY" \
 | Business | Tenants and roles · Pehchaan Pass issue, reuse, revocation · shadow mode with agreement stats · usage and cost metering · prioritised review queue · rules or LLM copilot · signed webhooks |
 | Privacy and security | Consent required · review-only image retention · erasure · encryption at rest · keyed ID hashes · hashed API keys · rate limits · hash-chained audit log · defusedxml · no PII echoed in errors |
 | Scale | Bounded queue with 429 backpressure · sync→async fallback · job polling · load test |
-| Not yet | Web capture page and organiser console · real UIDAI certificate/JWKS · Postgres/object storage · calibration on real photos |
+| Interfaces | Participant page with one-click demo cards, on-device blur check and in-page camera selfie · organiser console with queue, evidence ledger, copilot and review actions |
+| Not yet | Real UIDAI certificate and JWKS · Postgres and object storage · calibration on real photos · deployment |
 
 ## Data rules
 

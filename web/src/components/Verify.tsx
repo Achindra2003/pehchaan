@@ -1,6 +1,6 @@
-import { useEffect, useRef, useState } from 'react'
-import { listEvents, submitVerification } from '../api/client'
-import type { EventPolicy, VerificationResult } from '../api/types'
+import { useEffect, useState } from 'react'
+import { listEvents, listSamples, loadSample, submitVerification } from '../api/client'
+import type { DemoSample, EventPolicy, VerificationResult } from '../api/types'
 import { checkCapture } from '../lib/quality'
 import SelfieCapture from './SelfieCapture'
 import { Card, DecisionBadge, Field, LevelLadder, ReasonList, inputClass } from './ui'
@@ -15,6 +15,7 @@ const ACTION_LABEL: Record<string, string> = {
 
 export default function Verify() {
   const [events, setEvents] = useState<EventPolicy[]>([])
+  const [samples, setSamples] = useState<DemoSample[]>([])
   const [eventId, setEventId] = useState('')
   const [name, setName] = useState('')
   const [dob, setDob] = useState('')
@@ -26,7 +27,6 @@ export default function Verify() {
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [result, setResult] = useState<VerificationResult | null>(null)
-  const idInput = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
     listEvents()
@@ -35,20 +35,18 @@ export default function Verify() {
         setEventId((current) => current || policies[0]?.event_id || '')
       })
       .catch((exc: Error) => setError(exc.message))
+    listSamples().then(setSamples).catch(() => setSamples([]))
   }, [])
 
   async function onPickId(file: File | null) {
     setIdImage(file)
     setCaptureWarning(null)
     if (file && file.type.startsWith('image/')) {
-      const check = await checkCapture(file)
-      setCaptureWarning(check.warning)
+      setCaptureWarning((await checkCapture(file)).warning)
     }
   }
 
-  async function onSubmit(event: React.FormEvent) {
-    event.preventDefault()
-    if (!idImage) return
+  async function verify(input: { name: string; dob: string; eventId: string; image: File; selfieFile?: File | null }) {
     setBusy(true)
     setError(null)
     setResult(null)
@@ -56,14 +54,13 @@ export default function Verify() {
       setResult(
         await submitVerification({
           registrationId: `reg-${Date.now()}`,
-          eventId,
-          name,
-          dob,
-          subjectId: name.toLowerCase().replace(/\s+/g, '-'),
-          idImage,
-          selfie,
-          // A file input can't tell us whether the phone's camera or the gallery produced this, so we
-          // don't claim it did. Only the in-page camera capture below counts as a live capture.
+          eventId: input.eventId,
+          name: input.name,
+          dob: input.dob,
+          subjectId: input.name.toLowerCase().replace(/\s+/g, '-'),
+          idImage: input.image,
+          selfie: input.selfieFile ?? null,
+          // A file input can't tell us whether the camera or the gallery produced this, so we don't claim it did.
           idFromCamera: false,
           selfieFromCamera: selfieSource === 'camera',
         }),
@@ -71,6 +68,22 @@ export default function Verify() {
     } catch (exc) {
       setError((exc as Error).message)
     } finally {
+      setBusy(false)
+    }
+  }
+
+  async function runSample(sample: DemoSample) {
+    setName(sample.name)
+    setDob(sample.dob)
+    setEventId(sample.event)
+    setConsent(true)
+    setCaptureWarning(null)
+    try {
+      const image = await loadSample(sample.file)
+      setIdImage(image)
+      await verify({ name: sample.name, dob: sample.dob, eventId: sample.event, image })
+    } catch (exc) {
+      setError((exc as Error).message)
       setBusy(false)
     }
   }
@@ -84,23 +97,49 @@ export default function Verify() {
         <p className="mt-1 text-sm text-muted">
           {policy
             ? [
-                `Event on ${policy.event_date}`,
+                `${policy.event_date}`,
                 policy.min_age ? `${policy.min_age}+` : null,
                 policy.max_age ? `up to ${policy.max_age}` : null,
                 policy.student_only ? 'students only' : null,
-                policy.mode === 'shadow' ? 'shadow mode' : null,
+                policy.mode === 'shadow' ? 'shadow mode: decisions recorded, not enforced' : null,
               ]
                 .filter(Boolean)
                 .join(' · ')
             : 'Pick an event'}
         </p>
 
-        <form className="mt-4 space-y-4" onSubmit={onSubmit}>
+        {samples.length > 0 && (
+          <div className="mt-4 rounded-lg border border-dashed border-rule p-3">
+            <p className="text-xs font-semibold tracking-wide text-muted uppercase">Demo cards (synthetic specimens)</p>
+            <div className="mt-2 flex flex-wrap gap-2">
+              {samples.map((sample) => (
+                <button
+                  key={sample.file}
+                  type="button"
+                  disabled={busy}
+                  title={sample.note}
+                  onClick={() => runSample(sample)}
+                  className="rounded-full border border-rule px-3 py-1 text-sm hover:border-accent hover:text-accent disabled:opacity-40"
+                >
+                  {sample.label}
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+
+        <form
+          className="mt-4 space-y-4"
+          onSubmit={(event) => {
+            event.preventDefault()
+            if (idImage) verify({ name, dob, eventId, image: idImage, selfieFile: selfie })
+          }}
+        >
           <Field label="Event">
             <select className={inputClass} value={eventId} onChange={(e) => setEventId(e.target.value)}>
               {events.map((event) => (
                 <option key={event.event_id} value={event.event_id}>
-                  {event.event_id}
+                  {event.title || event.event_id}
                 </option>
               ))}
             </select>
@@ -113,13 +152,11 @@ export default function Verify() {
           </Field>
           <Field label="Photo of your ID">
             <input
-              ref={idInput}
               className={inputClass}
               type="file"
               accept="image/*,application/pdf"
               capture="environment"
               onChange={(e) => onPickId(e.target.files?.[0] ?? null)}
-              required
             />
           </Field>
           <SelfieCapture
@@ -141,7 +178,6 @@ export default function Verify() {
               className="mt-1"
               checked={consent}
               onChange={(e) => setConsent(e.target.checked)}
-              required
             />
             <span>
               I agree that my ID may be checked to confirm I am eligible for this event. It is deleted after the
@@ -152,7 +188,7 @@ export default function Verify() {
           <button
             type="submit"
             disabled={busy || !idImage || !consent}
-            className="w-full rounded-lg bg-accent px-4 py-3 font-semibold text-white disabled:opacity-40"
+            className="w-full rounded-lg bg-accent px-4 py-3 font-semibold text-white transition disabled:opacity-40"
           >
             {busy ? 'Checking…' : 'Verify me'}
           </button>
@@ -160,64 +196,107 @@ export default function Verify() {
         </form>
       </Card>
 
-      <Card className={result ? '' : 'hidden lg:block'}>
-        {!result ? (
-          <p className="text-sm text-muted">Your result appears here, with the reason for it.</p>
+      <Card>
+        {busy ? (
+          <Working />
+        ) : !result ? (
+          <p className="text-sm text-muted">
+            Your result appears here: the decision, how sure we are, and the reason for it.
+          </p>
         ) : (
-          <div className="space-y-5">
-            <div className="flex items-center justify-between gap-3">
-              <DecisionBadge decision={result.decision} large />
-              <span className="font-mono text-sm text-muted">
-                {Math.round(result.confidence * 100)}% · {result.latency_ms} ms
-              </span>
-            </div>
-
-            <LevelLadder level={result.evidence_level} />
-
-            {result.actions.length > 0 && (
-              <div className="rounded-lg bg-accent-soft p-3">
-                <p className="text-sm font-semibold text-accent">What to do next</p>
-                <ul className="mt-1 space-y-1 text-sm">
-                  {result.actions.map((action) => (
-                    <li key={action}>{ACTION_LABEL[action] ?? action}</li>
-                  ))}
-                </ul>
-              </div>
-            )}
-
-            <div>
-              <h3 className="text-sm font-semibold">Why</h3>
-              <div className="mt-2">
-                <ReasonList reasons={result.reasons} />
-              </div>
-            </div>
-
-            <dl className="grid grid-cols-2 gap-3 border-t border-rule pt-4 text-sm">
-              <div>
-                <dt className="text-muted">Document</dt>
-                <dd className="font-medium">
-                  {result.document.type.replace('_', ' ')}
-                  {result.document.id_last4 ? ` ••${result.document.id_last4}` : ''}
-                </dd>
-              </div>
-              <div>
-                <dt className="text-muted">Age on event date</dt>
-                <dd className="font-medium">{result.document.age_on_event_date ?? '—'}</dd>
-              </div>
-              {result.flags.guardian_consent_required && (
-                <div className="col-span-2 rounded-lg bg-warn-soft px-3 py-2 text-warn">
-                  Under 18: a parent or guardian needs to consent before the event.
-                </div>
-              )}
-              {result.pehchaan_pass && (
-                <div className="col-span-2 rounded-lg bg-ok-soft px-3 py-2 text-ok">
-                  Pehchaan Pass issued: the next Hackingly event skips this check entirely.
-                </div>
-              )}
-            </dl>
-          </div>
+          <Result result={result} />
         )}
       </Card>
+    </div>
+  )
+}
+
+function Working() {
+  return (
+    <div className="space-y-3">
+      <div className="h-6 w-40 animate-pulse rounded bg-info-soft" />
+      <div className="h-2 w-full animate-pulse rounded bg-info-soft" />
+      <p className="text-sm text-muted">Reading the document, checking the signature, looking for duplicates…</p>
+    </div>
+  )
+}
+
+function Result({ result }: { result: VerificationResult }) {
+  const passed = result.checks.filter((check) => check.status === 'pass').length
+  return (
+    <div className="space-y-5">
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <DecisionBadge decision={result.decision} large />
+        <span className="font-mono text-sm text-muted">
+          {Math.round(result.confidence * 100)}% sure · {(result.latency_ms / 1000).toFixed(1)}s
+        </span>
+      </div>
+
+      <div>
+        <div className="h-2 w-full overflow-hidden rounded-full bg-info-soft">
+          <div
+            className={`h-full ${result.decision === 'not_eligible' ? 'bg-bad' : result.decision === 'verified' ? 'bg-ok' : 'bg-warn'}`}
+            style={{ width: `${Math.round(result.confidence * 100)}%` }}
+          />
+        </div>
+        <p className="mt-1 text-xs text-muted">
+          {passed} of {result.checks.length} checks passed · evidence from {result.evidence_source.replace('_', ' ')}
+        </p>
+      </div>
+
+      <LevelLadder level={result.evidence_level} />
+
+      {result.actions.length > 0 && (
+        <div className="rounded-lg bg-accent-soft p-3">
+          <p className="text-sm font-semibold text-accent">What to do next</p>
+          <ul className="mt-1 space-y-1 text-sm">
+            {result.actions.map((action) => (
+              <li key={action}>{ACTION_LABEL[action] ?? action}</li>
+            ))}
+          </ul>
+        </div>
+      )}
+
+      <div>
+        <h3 className="text-sm font-semibold">Why</h3>
+        <div className="mt-2">
+          <ReasonList reasons={result.reasons} />
+        </div>
+      </div>
+
+      <dl className="grid grid-cols-2 gap-3 border-t border-rule pt-4 text-sm">
+        <div>
+          <dt className="text-muted">Document</dt>
+          <dd className="font-medium">
+            {result.document.type.replace('_', ' ')}
+            {result.document.id_last4 ? ` ••${result.document.id_last4}` : ''}
+          </dd>
+        </div>
+        <div>
+          <dt className="text-muted">Age on event date</dt>
+          <dd className="font-medium">{result.document.age_on_event_date ?? '—'}</dd>
+        </div>
+        {result.flags.guardian_consent_required && (
+          <div className="col-span-2 rounded-lg bg-warn-soft px-3 py-2 text-warn">
+            Under 18: a parent or guardian needs to consent before the event.
+          </div>
+        )}
+        {result.flags.duplicate_suspected && (
+          <div className="col-span-2 rounded-lg bg-warn-soft px-3 py-2 text-warn">
+            This ID, photo or face appears on another registration. Both are waiting for a person to look.
+          </div>
+        )}
+        {result.pehchaan_pass && (
+          <div className="col-span-2 rounded-lg bg-ok-soft px-3 py-2 text-ok">
+            Pehchaan Pass issued: the next Hackingly event skips this check entirely, at no OCR cost.
+          </div>
+        )}
+        {!result.enforced && (
+          <div className="col-span-2 rounded-lg bg-info-soft px-3 py-2 text-muted">
+            Shadow mode: this decision was recorded for comparison, not enforced.
+          </div>
+        )}
+      </dl>
     </div>
   )
 }

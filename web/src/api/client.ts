@@ -1,6 +1,6 @@
-import type { Copilot, EventPolicy, Stats, Usage, VerificationResult, VerificationSummary } from './types'
+import type { Copilot, DemoSample, EventPolicy, Stats, Usage, VerificationResult, VerificationSummary } from './types'
 
-const KEY = import.meta.env.VITE_PEHCHAAN_API_KEY ?? 'change-me-admin'
+const KEY = import.meta.env.VITE_PEHCHAAN_API_KEY ?? 'demo-key'
 
 async function call<T>(path: string, init: RequestInit = {}): Promise<T> {
   const response = await fetch(path, { ...init, headers: { 'X-API-Key': KEY, ...(init.headers ?? {}) } })
@@ -21,6 +21,18 @@ export const imageUrl = (verificationId: string, kind: 'id' | 'selfie') =>
   `/v1/verifications/${verificationId}/images/${kind}?key=${encodeURIComponent(KEY)}`
 
 export const listEvents = () => call<EventPolicy[]>('/v1/events')
+
+/** Demo cards served by the API so a live demo never opens a file picker. Dev only. */
+export async function listSamples(): Promise<DemoSample[]> {
+  const response = await fetch('/demo/samples')
+  return response.ok ? response.json() : []
+}
+
+export async function loadSample(file: string): Promise<File> {
+  const response = await fetch(`/demo/samples/${file}`)
+  if (!response.ok) throw new Error('Could not load the demo card')
+  return new File([await response.blob()], file, { type: 'image/jpeg' })
+}
 export const getStats = (eventId?: string) => call<Stats>(`/v1/stats${eventId ? `?event_id=${eventId}` : ''}`)
 export const getUsage = () => call<Usage>('/v1/usage')
 export const getVerification = (id: string) => call<VerificationResult>(`/v1/verifications/${id}`)

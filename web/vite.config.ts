@@ -7,6 +7,7 @@ export default defineConfig({
   server: {
     proxy: {
       '/v1': 'http://localhost:8000',
+      '/demo': 'http://localhost:8000',
       '/healthz': 'http://localhost:8000',
     },
   },

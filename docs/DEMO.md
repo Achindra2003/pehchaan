@@ -5,36 +5,32 @@ Four cases, about three minutes, one screen. Everything else (passes, Aadhaar Ap
 ## Before the judges arrive
 
 ```bash
-# 1. Fresh demo database, so duplicates start clean
-cd api && rm -rf demo-data
-
-# 2. Real UIDAI certificate if you have it, otherwise the TEST one for the specimen cards
-uv run python scripts/make_demo_samples.py      # writes demo-samples/ (git-ignored)
-
-# 3. API
-PEHCHAAN_API_KEYS="change-me-admin:hackingly:admin" \
-PEHCHAAN_UIDAI_CERT_PATH="demo-samples/certs" \
-PEHCHAAN_OCR_PROVIDER=rapidocr \
-PEHCHAAN_DATA_DIR=demo-data \
-uv run uvicorn pehchaan.main:app_factory --factory --port 8000
-
-# 4. Web
-cd ../web && npm run dev        # http://localhost:5173
+cd web && npm run build          # once, so the UI is served from the API
+cd ../api && uv run python scripts/demo.py
 ```
 
-Check `GET /v1/status` shows the certificate loaded. Have `demo-samples/README.md` open: it lists the name and date of birth to type for each card. **Use real IDs if the team is willing** — the specimen cards are the fallback.
+That clears earlier registrations (so duplicates fire only when you want them), makes the demo cards if they
+are missing, and serves everything on **http://localhost:8000**. `--keep` keeps the history; `--port` moves it.
 
-Reset between rehearsals: stop the API, `rm -rf demo-data`, start again.
+With real Aadhaar cards, point it at the real certificate instead of the test one:
+
+```bash
+PEHCHAAN_UIDAI_CERT_PATH=certs uv run python scripts/demo.py
+```
+
+The participant screen carries a row of **demo cards**. One click fills the form, loads the card and runs the
+verification, so nothing depends on finding a file on stage. Real IDs are still the better demo; the cards are
+the fallback and the rehearsal tool.
 
 ## The run
 
 | # | Case | What to do | What they see |
 |---|---|---|---|
 | 0 | The hook (20 s) | "Generative models make perfect fake Aadhaar cards, and vision models score at chance on AI-edited documents. So we don't judge pixels: we check what's signed, what agrees, and what we've seen before." | — |
-| 1 | Genuine (40 s) | Real Aadhaar or `genuine.jpg` | **Verified, L3, ~95%, about 2 s**, reasons listed, Pehchaan Pass issued |
-| 2 | Edited DOB (40 s) | `edited-dob.jpg`, type the DOB as printed | **Not eligible**: "The date of birth printed on the card differs from the UIDAI-signed QR code" |
-| 3 | Same ID, new name (40 s) | `reused-id.jpg` with a different name | **Needs review**, and the earlier genuine registration is pulled back into review too |
-| 4 | Blurry (20 s) | `blurry.jpg` | **Action required**: retake, nobody rejected. The blur check also runs on the phone before upload |
+| 1 | Genuine (40 s) | Real Aadhaar, or the **Genuine** card | **Verified, L3, 95%, about 2 s**, 8 of 9 checks passed, Pehchaan Pass issued |
+| 2 | Edited DOB (40 s) | **Edited Dob** card | **Not eligible**: "The date of birth printed on the card differs from the UIDAI-signed QR code" |
+| 3 | Same ID, new name (40 s) | **Reused Id** card | **Needs review**, and the earlier genuine registration is pulled back into review too |
+| 4 | Blurry (20 s) | **Blurry** card | **Action required** in 0.25 s: retake, nobody rejected. The same blur check runs on the phone before anything uploads |
 | 5 | Organiser (40 s) | Switch to Organiser | Queue ordered by priority, evidence ledger per check, copilot summary, approve/reject, and the ID image kept **only** because a human needs it |
 
 Close with the numbers: **0 genuine rejected, 0 attacks accepted, 96% auto-verified across 47 samples** (`eval/results.md`), one API call after their Textract step, shadow mode before enforcing.

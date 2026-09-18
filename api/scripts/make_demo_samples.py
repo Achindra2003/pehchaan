@@ -9,6 +9,7 @@ listing the form values to type during the demo, plus certs/ holding the TEST si
 from __future__ import annotations
 
 import argparse
+import json
 import random
 from datetime import date
 from pathlib import Path
@@ -16,6 +17,7 @@ from pathlib import Path
 from pehchaan import specimens as sp
 
 FORMS: list[str] = []
+MANIFEST: list[dict] = []
 
 
 def main() -> None:
@@ -46,7 +48,7 @@ def main() -> None:
     college = sp.render_college_id(
         student, institution="Specimen Institute of Technology", roll="1SI22CS042", valid_until=date(2027, 6, 30)
     )
-    _write(out, "college-id.jpg", sp.photograph(college, rng), student.name, student.dob, "student-only event: verified at L2")  # fmt: skip
+    _write(out, "college-id.jpg", sp.photograph(college, rng), student.name, student.dob, "student-only event: verified at L2", event="campus-hack-students")  # fmt: skip
 
     (out / "README.md").write_text(
         "# Demo cards (synthetic SPECIMEN, signed with a TEST key)\n\n"
@@ -57,12 +59,25 @@ def main() -> None:
         + "\n\nReal IDs are always the better demo; these are the fallback.\n",
         encoding="utf-8",
     )
+    (out / "samples.json").write_text(json.dumps(MANIFEST, indent=2), encoding="utf-8")
     print(f"wrote {len(FORMS)} demo cards to {out.resolve()}")
 
 
-def _write(out: Path, name: str, image: bytes, form_name: str, dob: date, note: str) -> None:
+def _write(
+    out: Path, name: str, image: bytes, form_name: str, dob: date, note: str, event: str = "ai-build-challenge-blr"
+) -> None:
     (out / name).write_bytes(image)
     FORMS.append(f"| {name} | {form_name} | {dob.isoformat()} | {note} |")
+    MANIFEST.append(
+        {
+            "file": name,
+            "label": name.removesuffix(".jpg").replace("-", " ").title(),
+            "name": form_name,
+            "dob": dob.isoformat(),
+            "event": event,
+            "note": note,
+        }
+    )
 
 
 if __name__ == "__main__":

@@ -16,6 +16,7 @@ class EventRules(BaseModel):
     """What the organiser sets. The service assigns event_id, tenant and version."""
 
     event_date: date
+    title: str = ""  # shown to participants; the event_id is used when empty
     min_age: int | None = Field(default=None, ge=0, le=120)
     max_age: int | None = Field(default=None, ge=0, le=120)
     student_only: bool = False

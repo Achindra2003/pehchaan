@@ -13,6 +13,7 @@ from fastapi.staticfiles import StaticFiles
 
 from pehchaan import __version__
 from pehchaan.aadhaar.app_vc import IssuerKeys
+from pehchaan.api.demo import demo
 from pehchaan.api.routes import public, router
 from pehchaan.config import Settings, get_settings
 from pehchaan.copilot import Copilot
@@ -29,14 +30,21 @@ from pehchaan.webhooks import WebhookSender
 logger = logging.getLogger("pehchaan")
 
 DEMO_EVENTS: dict[str, EventRules] = {
-    "ai-build-challenge-blr": EventRules(event_date=date(2026, 9, 18), min_age=18),
+    "ai-build-challenge-blr": EventRules(
+        event_date=date(2026, 9, 18), min_age=18, title="AI Build Challenge, Bengaluru"
+    ),
     "campus-hack-students": EventRules(
+        title="Campus Hack (students only)",
         event_date=date(2026, 10, 11),
         student_only=True,
         accepted_documents=frozenset({DocType.COLLEGE_ID, DocType.AADHAAR, DocType.PAN}),
     ),
-    "junior-coders-13-17": EventRules(event_date=date(2026, 11, 14), min_age=13, max_age=17),
-    "national-hackathon-shadow": EventRules(event_date=date(2026, 12, 5), min_age=18, mode="shadow"),
+    "junior-coders-13-17": EventRules(
+        event_date=date(2026, 11, 14), min_age=13, max_age=17, title="Junior Coders (13-17)"
+    ),
+    "national-hackathon-shadow": EventRules(
+        event_date=date(2026, 12, 5), min_age=18, mode="shadow", title="National Hackathon (shadow mode)"
+    ),
 }
 RETENTION_SWEEP_SECONDS = 3600
 
@@ -107,6 +115,8 @@ def create_app(settings: Settings | None = None) -> FastAPI:
 
     app.include_router(router)
     app.include_router(public)
+    if settings.env != "prod":
+        app.include_router(demo)
 
     @app.get("/healthz", tags=["ops"])
     async def healthz() -> dict[str, str]:
