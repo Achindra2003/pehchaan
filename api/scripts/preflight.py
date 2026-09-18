@@ -126,7 +126,7 @@ def _textract(settings: Settings) -> tuple[str, str, str]:
 def _copilot(settings: Settings) -> tuple[str, str, str]:
     if settings.llm_provider == "groq" and settings.groq_api_key.get_secret_value():
         return OK, "reviewer copilot", f"LLM summaries via {settings.groq_model}"
-    return WARN, "reviewer copilot", "rules-based summaries; set PEHCHAAN_LLM_PROVIDER=groq + GROQ_API_KEY for LLM"
+    return WARN, "reviewer copilot", "rules-based summaries; set PEHCHAAN_LLM_PROVIDER=groq + PEHCHAAN_GROQ_API_KEY for LLM"
 
 
 def _keys(settings: Settings) -> tuple[str, str, str]:
