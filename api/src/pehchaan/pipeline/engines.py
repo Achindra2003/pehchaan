@@ -53,7 +53,7 @@ class Engines:
             settings=settings,
             crypto=crypto,
             store=store,
-            faces=FaceEngine.load(settings.models_dir, settings.workers),
+            faces=FaceEngine.load(settings.models_dir, settings.workers, settings.liveness_live_index),
             qr=QrReader(settings.models_dir, settings.workers),
             certificates=certificates,
             textract=textract,

@@ -12,16 +12,16 @@ The demo script lives in [DEMO.md](DEMO.md). This is what exists and what doesn'
 | Deciding | Versioned event policy, reason catalog, evidence ladder, confidence; age on the event date, year-of-birth-only cards, signed age attestations, minors, student rules |
 | Running it | Tenants and roles, rate limits, bounded queue with backpressure, idempotency, signed webhooks, prioritised review queue, copilot, usage metering, hash-chained audit log, erasure, retention sweep |
 | Interfaces | Participant capture page with an on-device blur check and in-page camera selfie; organiser console with queue, evidence ledger, copilot and review actions |
-| Evidence | 77 tests, and `eval/run.py` over 47 SPECIMEN samples: 0 genuine rejected, 0 attacks accepted, 96% auto-verified |
+| Evidence | 97 tests (including the selfie decision paths and passport, voter ID and driving licence parsing), and `eval/run.py` over 47 SPECIMEN samples: 0 genuine rejected, 0 attacks accepted, 96% auto-verified |
 
 ## Not done
 
 - **Never run on a real Aadhaar with the real UIDAI certificate.** This is the first thing to do at the venue.
-- **Face matching and liveness are untested on real faces**, including which class index MiniFASNet calls "live" (`LIVE_CLASS` in `vision/faces.py`). If a live selfie is called a spoof, set `PEHCHAAN_LIVENESS_ENABLED=false` rather than debug during a demo.
-- **Recapture (screen photo) detection is computed but disabled**; it needs a threshold calibrated on real photos of screens versus real cards (`moire_score` in the tamper check details).
+- **Face matching and liveness are untested on real faces**, including which class index MiniFASNet calls "live". If a live selfie reads as a spoof, flip `PEHCHAAN_LIVENESS_LIVE_INDEX=1` or set `PEHCHAAN_LIVENESS_ENABLED=false`; no code change needed. The selfie decision paths themselves are covered by tests with a stand-in engine.
+- **Recapture (screen photo) detection is computed but disabled.** A synthetic screen simulation did not separate from real photos, so calibrating on it would have been fitting to our own artifact. `scripts/calibrate_recapture.py` sets the threshold from 10 real photos in two minutes, and prints "leave it disabled" when they overlap.
 - **No AISHE institution registry file**, so unknown colleges aren't flagged. Drop a CSV at `data/aishe_colleges.csv` to turn it on.
 - **Aadhaar App runs against a test issuer**; production needs OVSE onboarding with UIDAI and their JWKS.
-- **Single process, SQLite.** About 27 verifications/minute per process; scale with more processes, Postgres and object storage. Multi-process throughput is unmeasured.
+- **SQLite, one machine.** Measured at ~40 verifications/minute on a 16-thread laptop, and more worker processes did not raise it (the CPU is the limit, not the GIL). Capacity comes from more machines, with Postgres and object storage behind them.
 - **No deployment.** Everything runs locally.
 
 ## At the venue, in order

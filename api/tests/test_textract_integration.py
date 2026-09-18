@@ -117,3 +117,52 @@ def test_verification_runs_on_hackinglys_textract_output_without_any_ocr(client,
     assert result["usage"]["ocr_provider"] == "textract:hackingly"
     assert result["usage"]["textract_detect_pages"] == 0  # we didn't call Textract again
     assert result["usage"]["estimated_cost_usd"] < 0.001
+
+
+class StubTextract:
+    """Stands in for the AWS client: the Queries path is exercised without credentials."""
+
+    def __init__(self) -> None:
+        self.detect_calls = 0
+        self.query_calls: list[list[str]] = []
+
+    def detect(self, jpeg: bytes):
+        self.detect_calls += 1
+        return parse_textract(
+            textract_response(["INCOME TAX DEPARTMENT", "GOVT. OF INDIA", "Permanent Account Number"])
+        )
+
+    def query(self, jpeg: bytes, aliases: list[str]):
+        self.query_calls.append(aliases)
+        answers = {"NAME": "Kavya Iyer", "DOB": "09/08/2004", "ID_NUMBER": "ABCPI1234F"}
+        return parse_textract(textract_response([], {a: answers[a] for a in aliases if a in answers})).queries
+
+
+async def test_queries_are_asked_only_for_the_fields_the_lines_missed(signing_dir):
+    """Textract Queries cost ten times a plain read, so they run only when something is actually missing."""
+    import numpy as np
+    from helpers import make_ctx
+
+    from pehchaan.aadhaar.secure_qr import CertificateStore
+    from pehchaan.pipeline.checks.extract import ExtractCheck
+    from pehchaan.vision.qr import QrReader
+
+    stub = StubTextract()
+    check = ExtractCheck(QrReader(signing_dir), CertificateStore([]), stub, rapid=None, use_queries=True)
+    ctx = make_ctx(policy_for_pan())
+    ctx.image = np.full((400, 700, 3), 240, dtype=np.uint8)
+
+    result = await check.run(ctx)
+    assert stub.detect_calls == 1
+    assert sorted(stub.query_calls[0]) == ["DOB", "ID_NUMBER", "NAME"]
+    assert ctx.fields.name == "Kavya Iyer"
+    assert ctx.fields.id_number == "ABCPI1234F"
+    assert result.details["textract_query_pages"] == 1
+
+
+def policy_for_pan():
+    from datetime import date as _date
+
+    from pehchaan.domain.policy import EventPolicy
+
+    return EventPolicy(event_id="evt", event_date=_date(2026, 9, 18), min_age=18)

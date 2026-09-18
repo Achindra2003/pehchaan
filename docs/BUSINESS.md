@@ -24,7 +24,7 @@ The market is moving the same way: HackerOne made ID verification mandatory for 
 | OCR when Hackingly sends its Textract JSON | $0 | Reuses the call Hackingly already pays for |
 | OCR otherwise | $0.0015 DetectDocumentText, +$0.015 only if Queries are needed | AWS list prices (US West; Mumbai to confirm) |
 | Local OCR fallback | $0 external | RapidOCR on CPU |
-| Compute | ~2.3 s CPU per document verification | `scripts/loadtest.py`, 16-thread laptop, one process |
+| Compute | ~1.2 s per verification unloaded; ~40/minute per machine | `scripts/loadtest.py`, 16-thread laptop |
 | Pass reuse | ~0 | No OCR, no image, a signature check |
 | Copilot summary | Only on review cases | Rules-based fallback costs nothing |
 | Human review | 3 min assumed per manual check | Configurable; `GET /v1/usage` reports minutes avoided |

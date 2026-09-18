@@ -39,7 +39,7 @@ Close with the numbers: **0 genuine rejected, 0 attacks accepted, 96% auto-verif
 ## Questions to expect
 
 - **"What about a fake PAN or college ID with no QR?"** Nothing to verify against, so it leans on format rules, form consistency, the duplicate graph and human review. We don't claim pixel forensics works; the benchmarks say it doesn't.
-- **"How fast, how much?"** About 2 s per verification, ~27 per minute per process, scale by adding processes. Cost is the Textract page they already pay for, plus paise of compute. `GET /v1/usage`.
+- **"How fast, how much?"** 1.2 s unloaded, about 40 per minute per machine, measured. Concurrency beyond that adds latency rather than throughput, so bursts go through a queue and capacity comes from more machines. Cost is the Textract page they already pay for, plus paise of compute. `GET /v1/usage`.
 - **"Is this legal with Aadhaar?"** Offline verification only, QR data never stored, masked number, consent recorded, deletion on request. Production needs OVSE registration.
 - **"Where does it go next?"** The Aadhaar App (OpenID4VP): name and `AgeAbove18` only, face-authenticated in the app, no image at all. The verifier is built and tested against a test issuer.
 - **"What if the model is wrong?"** No model decides. Checks produce evidence, versioned rules decide, every decision has reason codes and a hash-chained audit entry.

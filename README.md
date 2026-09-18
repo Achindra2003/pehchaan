@@ -56,7 +56,7 @@ uv run python scripts/demo.py                 # everything on http://localhost:8
 cp ../.env.example .env                       # PEHCHAAN_API_KEYS is key:tenant:role
 uv run uvicorn pehchaan.main:app_factory --factory --reload   # http://localhost:8000/docs
 
-uv run pytest                                 # 77 tests, including end-to-end on specimen cards
+uv run pytest                                 # 97 tests, including end-to-end on specimen cards
 uv run python ../eval/run.py                  # regenerates eval/results.md
 uv run python scripts/loadtest.py             # throughput per process
 ```
@@ -77,7 +77,7 @@ curl -X POST localhost:8000/v1/verifications -H "X-API-Key: $KEY" \
 | Verification | Quality gate · Textract JSON / live Textract / local OCR · doc classification and parsing (Aadhaar, PAN, voter ID, passport MRZ, DL, college ID) · Aadhaar Secure QR signature · duplicate graph · identity match · selfie match + liveness · soft tamper signals · eligibility (age on event date, minors, student-only) |
 | Business | Tenants and roles · Pehchaan Pass issue, reuse, revocation · shadow mode with agreement stats · usage and cost metering · prioritised review queue · rules or LLM copilot · signed webhooks |
 | Privacy and security | Consent required · review-only image retention · erasure · encryption at rest · keyed ID hashes · hashed API keys · rate limits · hash-chained audit log · defusedxml · no PII echoed in errors |
-| Scale | Bounded queue with 429 backpressure · sync→async fallback · job polling · load test |
+| Scale | Bounded queue with 429 backpressure · sync→async fallback · job polling · measured at ~40 verifications/min per machine |
 | Interfaces | Participant page with one-click demo cards, on-device blur check and in-page camera selfie · organiser console with queue, evidence ledger, copilot and review actions |
 | Not yet | Real UIDAI certificate and JWKS · Postgres and object storage · calibration on real photos · deployment |
 

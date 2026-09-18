@@ -16,7 +16,7 @@ logger = logging.getLogger(__name__)
 YUNET = "face_detection_yunet_2023mar.onnx"
 SFACE = "face_recognition_sface_2021dec.onnx"
 MINIFASNET = "minifasnet_v2.onnx"
-LIVE_CLASS = 0  # model card: [live, print attack, replay attack]
+DEFAULT_LIVE_CLASS = 0  # model card: [live, print attack, replay attack]
 
 
 @dataclass(frozen=True)
@@ -34,7 +34,8 @@ class Face:
 
 
 class FaceEngine:
-    def __init__(self, models_dir: Path, size: int = 4) -> None:
+    def __init__(self, models_dir: Path, size: int = 4, live_class: int = DEFAULT_LIVE_CLASS) -> None:
+        self._live_class = live_class
         import onnxruntime as ort
 
         # OpenCV DNN models aren't thread-safe: one detector/recogniser pair per concurrent verification.
@@ -51,12 +52,12 @@ class FaceEngine:
         self._liveness = ort.InferenceSession(str(models_dir / MINIFASNET), options, providers=["CPUExecutionProvider"])
 
     @classmethod
-    def load(cls, models_dir: Path, size: int = 4) -> FaceEngine | None:
+    def load(cls, models_dir: Path, size: int = 4, live_class: int = DEFAULT_LIVE_CLASS) -> FaceEngine | None:
         missing = [name for name in (YUNET, SFACE, MINIFASNET) if not (models_dir / name).exists()]
         if missing:
             logger.warning("face models missing (%s); run scripts/download_models.py", ", ".join(missing))
             return None
-        return cls(models_dir, size)
+        return cls(models_dir, size, live_class)
 
     @contextmanager
     def _models(self):
@@ -100,7 +101,7 @@ class FaceEngine:
         logits = self._liveness.run(None, {self._liveness.get_inputs()[0].name: tensor})[0][0]
         probs = np.exp(logits - logits.max())
         probs /= probs.sum()
-        return float(probs[LIVE_CLASS])
+        return float(probs[self._live_class])
 
     @staticmethod
     def similarity(a: np.ndarray, b: np.ndarray) -> float:

@@ -300,3 +300,25 @@ def present_test_credential(issued: str, disclose: set[str], holder_key, *, audi
         "sd_hash": jose.b64url(hashlib.sha256(presented.encode()).digest()),
     }
     return presented + jose.sign(kb, holder_key, typ="kb+jwt")
+
+
+def screen_photo(card: Image.Image, rng: random.Random) -> bytes:
+    """Simulate photographing the card on a screen: subpixel grid, then resampling at a different pitch.
+
+    That mismatch is what produces moire in real life, which is what the recapture check looks for.
+    """
+    width = 1400
+    shown = card.resize((width, round(card.height * width / card.width)), Image.LANCZOS)
+    pixels = np.asarray(shown).astype(np.float32)
+    # RGB subpixel stripes plus the dark gaps between pixels
+    stripes = np.zeros((1, pixels.shape[1], 3), dtype=np.float32)
+    for channel in range(3):
+        stripes[0, channel::3, channel] = 1.0
+    pixels *= 0.55 + 0.75 * stripes
+    pixels[:, ::3] *= 0.9
+    pixels[::3, :] *= 0.92
+    glow = np.linspace(1.12, 0.94, pixels.shape[1], dtype=np.float32)[None, :, None]
+    screen = Image.fromarray(np.clip(pixels * glow, 0, 255).astype(np.uint8))
+    # The camera samples that grid at its own pitch: the beat between the two is the moire
+    captured = screen.resize((round(width * 0.62), round(screen.height * 0.62)), Image.BILINEAR)
+    return photograph(captured, rng, quality=90)

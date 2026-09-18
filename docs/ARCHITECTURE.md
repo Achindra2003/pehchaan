@@ -13,7 +13,7 @@ Research behind these choices: [RESEARCH.md](RESEARCH.md). Threat model: [SECURI
 | 1. Signed | Aadhaar Secure QR signature (UIDAI RSA-2048); in production DigiLocker and Aadhaar App credentials | Yes, when signed data contradicts the card or the event rules |
 | 2. Consistent | Form ↔ OCR ↔ QR ↔ face ↔ college email ↔ institution registry | Only an age outside the window with a confirmed DOB |
 | 3. Seen before | Same ID, image or face under another identity, across every Hackingly event | Never. Sends both cases to review |
-| 4. Pixels | Screen recapture, local edit traces, editing-software metadata, vision-model second opinion | Never. Review or retake only |
+| 4. Pixels | Screen recapture, local edit traces, editing-software metadata | Never. Review or retake only |
 
 And one product rule: **a genuine student is never rejected by an uncertain signal.** Uncertainty turns into a one-tap fix for the participant, or a review for the organiser.
 
@@ -91,12 +91,12 @@ flowchart LR
 
 ### Pipeline stages
 
-1. **Quality gate** (sync, ~50 ms). Laplacian-variance blur, saturated-pixel glare on the card region, card contour found, face present on the ID. The same checks run on-device first, so most retakes happen before upload.
-2. **Extract.** Parse Hackingly's Textract response when supplied (no second OCR bill). If name, DOB, ID number, institution or validity are missing, call `AnalyzeDocument` with Queries. Classify the document type deterministically from anchor text ("INCOME TAX DEPARTMENT", "ELECTION COMMISSION OF INDIA", MRZ `P<IND`, Aadhaar number pattern). Fall back to a vision model only for college IDs, and **ground every value it proposes** in the OCR text: a value that does not appear in the OCR tokens is dropped.
+1. **Quality gate** (~250 ms). Laplacian-variance blur, saturated-pixel glare on the card region, card contour found, face present on the ID. The same checks run on-device first, so most retakes happen before upload.
+2. **Extract.** Parse Hackingly's Textract response when supplied (no second OCR bill). If name, DOB, ID number, institution or validity are missing, call `AnalyzeDocument` with Queries. Classify the document type deterministically from anchor text ("INCOME TAX DEPARTMENT", "ELECTION COMMISSION OF INDIA", MRZ `P<IND`, Aadhaar number pattern). No vision model reads the document: Groq's production models are text-only, and a model that invents a plausible date is worse than a field left empty, which becomes a retake.
 3. **Checks in parallel** (async, CPU work in a thread pool):
    - **Document rules.** Aadhaar Verhoeff checksum, PAN structure (4th char `P` for individuals; 5th char surname initial as a soft hint only, since initial-first South Indian names break it), EPIC and passport formats, passport MRZ check digits, date sanity, college ID validity on the event date.
    - **Aadhaar QR proof.** WeChat QR detector → big-integer decode → gzip → field split → **RSA/SHA-256 signature verified against the UIDAI certificate** → QR name/DOB/gender compared with printed OCR and form (year-of-birth-only cards handled) → QR photo compared with printed photo. QR data is used in memory and discarded.
-   - **Edit and recapture signals.** Screen moiré via FFT peaks, noise/compression inconsistency inside the DOB and name boxes compared with the rest of the card, text-line geometry anomalies from Textract bounding boxes (a pasted DOB sits at a different height or angle), editing-software metadata. Optional vision-model second opinion. All soft.
+   - **Edit and recapture signals.** Screen moiré via FFT peaks, noise/compression inconsistency inside the DOB and name boxes compared with the rest of the card, text-line geometry anomalies from Textract bounding boxes (a pasted DOB sits at a different height or angle), editing-software metadata. All soft, and the recapture signal is reported but disabled until calibrated on real photos.
    - **Duplicate graph.** Keyed HMAC of (document type, normalised number); PDQ hash of the card crop; SFace embedding of the ID face; email/phone/device velocity. Scope is **platform-wide**: the same person registering for many events is normal, the same ID or face under a different identity is a conflict.
    - **Identity match.** Form ↔ OCR ↔ QR names with `indic-namematch`; DOB; college email domain ↔ institution (AISHE registry); selfie ↔ ID/QR photo with SFace after MiniFASNet anti-spoofing.
 4. **Eligibility.** Age on the **event date** (not the registration date). DOB strength decides whether an out-of-range age is a hard reason or a review. Student-only events need student evidence; an Aadhaar alone proves age, not enrolment, so it produces `action_required: upload_college_id`.
@@ -195,6 +195,23 @@ Images live in private object storage (S3 SSE-KMS, `ap-south-1`) with lifecycle 
 ## 8. Scale and unit economics
 
 - **Stateless API + worker pool.** The API does validation, the quality gate and orchestration; CPU-heavy checks run in workers behind a queue (SQS or Redis) that autoscale on depth. Registration deadlines are spiky; the queue absorbs them and the webhook path covers anything slower than the sync budget.
+### Measured throughput (16-thread laptop, local OCR)
+
+| In-flight verifications | Throughput | Median latency |
+|---|---|---|
+| 1 | 42/min | 1.2 s |
+| 2 | 36/min | 3.1 s |
+| 4 | 32/min | 6.9 s |
+| 12 | 26/min | 20 s |
+
+One verification already spreads across several cores (OCR and OpenCV are internally parallel), so the box tops
+out near **40 verifications/minute** and extra concurrency buys latency, not throughput. Four uvicorn worker
+processes measured the same as one, which rules out Python's GIL as the limit: it is the CPU.
+
+That is what the bounded queue is for. Keep in-flight work small (1-2 per process), let the queue hold bursts,
+and add machines for capacity. Registration deadlines are spiky, and a queue plus webhooks keeps latency
+predictable instead of letting everything slow down at once. Reproduce with `scripts/loadtest.py`.
+
 - **Cost per verification.** OCR is free if Hackingly's Textract response is reused; otherwise $0.0015 (DetectDocumentText) plus $0.015 only when Queries are needed (US list prices). CV models are small ONNX files on CPU. The LLM copilot runs only on review cases. Exact compute cost per verification comes from `eval/`, not guesses.
 - **Cost falls over time.** Every verified pass removes a future verification; every review outcome improves calibration and reduces reviews.
 - **Multi-tenant from day one**: per-tenant keys, policies, retention and webhooks.

@@ -55,6 +55,7 @@ class Settings(BaseSettings):
     recapture_check_enabled: bool = False
     liveness_enabled: bool = True
     liveness_threshold: float = 0.5
+    liveness_live_index: int = 0  # MiniFASNet class order is [live, print, replay]; flip if real selfies read as spoofs
 
     # Reviewer copilot
     llm_provider: Literal["none", "groq"] = "none"
