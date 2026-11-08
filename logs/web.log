@@ -1,0 +1,10 @@
+
+> pehchaan-web@0.0.0 dev
+> vite --host 0.0.0.0
+
+
+  VITE v8.3.0  ready in 206 ms
+
+  ➜  Local:   http://localhost:5173/
+  ➜  Network: http://10.4.159.93:5173/  wlo1
+  ➜  Network: http://172.28.0.1:5173/   br-2d73d1d71fd7

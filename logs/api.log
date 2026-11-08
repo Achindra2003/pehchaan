@@ -1,0 +1,129 @@
+INFO:     Will watch for changes in these directories: ['/home/darshan/Projects/pehchaan/api']
+INFO:     Uvicorn running on http://127.0.0.1:8000 (Press CTRL+C to quit)
+INFO:     Started reloader process [466393] using WatchFiles
+INFO:     Started server process [466395]
+INFO:     Waiting for application startup.
+2026-10-08 13:58:44,646 WARNING pehchaan.pipeline.engines: no UIDAI certificates at certs; Aadhaar QR signatures won't be verified
+2026-10-08 13:58:44,811 INFO pehchaan: pehchaan ready: {'ocr': 'rapidocr', 'faces': True, 'uidai_certificates': [], 'institution_registry': False}
+INFO:     Application startup complete.
+INFO:     127.0.0.1:40096 - "GET /healthz HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60798 - "GET /demo/samples HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:60790 - "GET /v1/events HTTP/1.1" 401 Unauthorized
+INFO:     127.0.0.1:60800 - "GET /demo/samples HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:60802 - "GET /v1/events HTTP/1.1" 401 Unauthorized
+INFO:     127.0.0.1:60810 - "GET /v1/verifications?limit=50&open_only=true HTTP/1.1" 401 Unauthorized
+INFO:     127.0.0.1:60818 - "GET /v1/stats HTTP/1.1" 401 Unauthorized
+INFO:     127.0.0.1:60828 - "GET /v1/usage HTTP/1.1" 401 Unauthorized
+INFO:     127.0.0.1:60840 - "GET /v1/verifications?limit=50&open_only=true HTTP/1.1" 401 Unauthorized
+INFO:     127.0.0.1:60848 - "GET /v1/stats HTTP/1.1" 401 Unauthorized
+INFO:     127.0.0.1:60864 - "GET /v1/usage HTTP/1.1" 401 Unauthorized
+INFO:     127.0.0.1:60882 - "GET /demo/samples HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:60874 - "GET /v1/events HTTP/1.1" 401 Unauthorized
+INFO:     127.0.0.1:60888 - "GET /demo/samples HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:60904 - "GET /v1/events HTTP/1.1" 401 Unauthorized
+INFO:     127.0.0.1:34380 - "GET /v1/verifications?limit=50&open_only=true HTTP/1.1" 401 Unauthorized
+INFO:     127.0.0.1:34384 - "GET /v1/stats HTTP/1.1" 401 Unauthorized
+INFO:     127.0.0.1:34386 - "GET /v1/usage HTTP/1.1" 401 Unauthorized
+INFO:     127.0.0.1:34404 - "GET /v1/verifications?limit=50&open_only=true HTTP/1.1" 401 Unauthorized
+INFO:     127.0.0.1:34400 - "GET /v1/stats HTTP/1.1" 401 Unauthorized
+INFO:     127.0.0.1:34410 - "GET /v1/usage HTTP/1.1" 401 Unauthorized
+INFO:     127.0.0.1:34426 - "GET /demo/samples HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:34418 - "GET /v1/events HTTP/1.1" 401 Unauthorized
+INFO:     127.0.0.1:34442 - "GET /demo/samples HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:34456 - "GET /v1/events HTTP/1.1" 401 Unauthorized
+INFO:     127.0.0.1:34472 - "GET /v1/verifications?limit=50&open_only=true HTTP/1.1" 401 Unauthorized
+INFO:     127.0.0.1:34482 - "GET /v1/stats HTTP/1.1" 401 Unauthorized
+INFO:     127.0.0.1:34490 - "GET /v1/usage HTTP/1.1" 401 Unauthorized
+INFO:     127.0.0.1:34516 - "GET /v1/stats HTTP/1.1" 401 Unauthorized
+INFO:     127.0.0.1:34500 - "GET /v1/verifications?limit=50&open_only=true HTTP/1.1" 401 Unauthorized
+INFO:     127.0.0.1:34526 - "GET /v1/usage HTTP/1.1" 401 Unauthorized
+INFO:     127.0.0.1:34558 - "GET /v1/stats HTTP/1.1" 401 Unauthorized
+INFO:     127.0.0.1:34542 - "GET /v1/verifications?limit=50&open_only=true HTTP/1.1" 401 Unauthorized
+INFO:     127.0.0.1:34570 - "GET /v1/usage HTTP/1.1" 401 Unauthorized
+INFO:     127.0.0.1:54108 - "GET /v1/verifications?limit=50&open_only=true HTTP/1.1" 401 Unauthorized
+INFO:     127.0.0.1:54112 - "GET /v1/stats HTTP/1.1" 401 Unauthorized
+INFO:     127.0.0.1:54126 - "GET /v1/usage HTTP/1.1" 401 Unauthorized
+INFO:     127.0.0.1:54146 - "GET /v1/stats HTTP/1.1" 401 Unauthorized
+INFO:     127.0.0.1:54134 - "GET /v1/verifications?limit=50&open_only=true HTTP/1.1" 401 Unauthorized
+INFO:     127.0.0.1:54154 - "GET /v1/usage HTTP/1.1" 401 Unauthorized
+INFO:     127.0.0.1:33548 - "GET /v1/verifications?limit=50&open_only=true HTTP/1.1" 401 Unauthorized
+INFO:     127.0.0.1:33564 - "GET /v1/stats HTTP/1.1" 401 Unauthorized
+INFO:     127.0.0.1:33580 - "GET /v1/usage HTTP/1.1" 401 Unauthorized
+INFO:     127.0.0.1:33596 - "GET /v1/stats HTTP/1.1" 401 Unauthorized
+INFO:     127.0.0.1:33594 - "GET /v1/verifications?limit=50&open_only=true HTTP/1.1" 401 Unauthorized
+INFO:     127.0.0.1:33612 - "GET /v1/usage HTTP/1.1" 401 Unauthorized
+INFO:     127.0.0.1:39798 - "GET /v1/usage HTTP/1.1" 401 Unauthorized
+INFO:     127.0.0.1:39772 - "GET /v1/verifications?limit=50&open_only=true HTTP/1.1" 401 Unauthorized
+INFO:     127.0.0.1:39782 - "GET /v1/stats HTTP/1.1" 401 Unauthorized
+INFO:     127.0.0.1:39814 - "GET /v1/stats HTTP/1.1" 401 Unauthorized
+INFO:     127.0.0.1:39800 - "GET /v1/verifications?limit=50&open_only=true HTTP/1.1" 401 Unauthorized
+INFO:     127.0.0.1:39828 - "GET /v1/usage HTTP/1.1" 401 Unauthorized
+INFO:     127.0.0.1:48122 - "GET /v1/usage HTTP/1.1" 401 Unauthorized
+INFO:     127.0.0.1:48110 - "GET /v1/stats HTTP/1.1" 401 Unauthorized
+INFO:     127.0.0.1:48096 - "GET /v1/verifications?limit=50&open_only=true HTTP/1.1" 401 Unauthorized
+INFO:     127.0.0.1:48128 - "GET /v1/verifications?limit=50&open_only=true HTTP/1.1" 401 Unauthorized
+INFO:     127.0.0.1:48150 - "GET /v1/usage HTTP/1.1" 401 Unauthorized
+INFO:     127.0.0.1:48142 - "GET /v1/stats HTTP/1.1" 401 Unauthorized
+INFO:     127.0.0.1:56788 - "GET /v1/stats HTTP/1.1" 401 Unauthorized
+INFO:     127.0.0.1:56772 - "GET /v1/verifications?limit=50&open_only=true HTTP/1.1" 401 Unauthorized
+INFO:     127.0.0.1:56796 - "GET /v1/usage HTTP/1.1" 401 Unauthorized
+INFO:     127.0.0.1:56800 - "GET /v1/verifications?limit=50&open_only=true HTTP/1.1" 401 Unauthorized
+INFO:     127.0.0.1:56806 - "GET /v1/stats HTTP/1.1" 401 Unauthorized
+INFO:     127.0.0.1:56814 - "GET /v1/usage HTTP/1.1" 401 Unauthorized
+INFO:     127.0.0.1:59894 - "GET /v1/stats HTTP/1.1" 401 Unauthorized
+INFO:     127.0.0.1:59892 - "GET /v1/verifications?limit=50&open_only=true HTTP/1.1" 401 Unauthorized
+INFO:     127.0.0.1:59896 - "GET /v1/usage HTTP/1.1" 401 Unauthorized
+INFO:     127.0.0.1:59904 - "GET /v1/verifications?limit=50&open_only=true HTTP/1.1" 401 Unauthorized
+INFO:     127.0.0.1:59908 - "GET /v1/stats HTTP/1.1" 401 Unauthorized
+INFO:     127.0.0.1:59910 - "GET /v1/usage HTTP/1.1" 401 Unauthorized
+INFO:     127.0.0.1:55854 - "GET /v1/stats HTTP/1.1" 401 Unauthorized
+INFO:     127.0.0.1:55870 - "GET /v1/usage HTTP/1.1" 401 Unauthorized
+INFO:     127.0.0.1:55838 - "GET /v1/verifications?limit=50&open_only=true HTTP/1.1" 401 Unauthorized
+INFO:     127.0.0.1:55882 - "GET /v1/verifications?limit=50&open_only=true HTTP/1.1" 401 Unauthorized
+INFO:     127.0.0.1:55896 - "GET /v1/stats HTTP/1.1" 401 Unauthorized
+INFO:     127.0.0.1:55908 - "GET /v1/usage HTTP/1.1" 401 Unauthorized
+INFO:     127.0.0.1:33026 - "GET /v1/verifications?limit=50&open_only=true HTTP/1.1" 401 Unauthorized
+INFO:     127.0.0.1:33042 - "GET /v1/stats HTTP/1.1" 401 Unauthorized
+INFO:     127.0.0.1:33058 - "GET /v1/usage HTTP/1.1" 401 Unauthorized
+INFO:     127.0.0.1:33086 - "GET /v1/usage HTTP/1.1" 401 Unauthorized
+INFO:     127.0.0.1:33080 - "GET /v1/stats HTTP/1.1" 401 Unauthorized
+INFO:     127.0.0.1:33066 - "GET /v1/verifications?limit=50&open_only=true HTTP/1.1" 401 Unauthorized
+INFO:     127.0.0.1:38468 - "GET /v1/verifications?limit=50&open_only=true HTTP/1.1" 401 Unauthorized
+INFO:     127.0.0.1:38470 - "GET /v1/stats HTTP/1.1" 401 Unauthorized
+INFO:     127.0.0.1:38478 - "GET /v1/usage HTTP/1.1" 401 Unauthorized
+INFO:     127.0.0.1:38500 - "GET /v1/stats HTTP/1.1" 401 Unauthorized
+INFO:     127.0.0.1:38490 - "GET /v1/verifications?limit=50&open_only=true HTTP/1.1" 401 Unauthorized
+INFO:     127.0.0.1:38512 - "GET /v1/usage HTTP/1.1" 401 Unauthorized
+INFO:     127.0.0.1:34870 - "GET /v1/stats HTTP/1.1" 401 Unauthorized
+INFO:     127.0.0.1:34860 - "GET /v1/verifications?limit=50&open_only=true HTTP/1.1" 401 Unauthorized
+INFO:     127.0.0.1:34876 - "GET /v1/usage HTTP/1.1" 401 Unauthorized
+INFO:     127.0.0.1:52588 - "GET /v1/stats HTTP/1.1" 401 Unauthorized
+INFO:     127.0.0.1:52584 - "GET /v1/verifications?limit=50&open_only=true HTTP/1.1" 401 Unauthorized
+INFO:     127.0.0.1:52594 - "GET /v1/usage HTTP/1.1" 401 Unauthorized
+INFO:     127.0.0.1:45516 - "GET /v1/verifications?limit=50&open_only=true HTTP/1.1" 401 Unauthorized
+INFO:     127.0.0.1:45518 - "GET /v1/stats HTTP/1.1" 401 Unauthorized
+INFO:     127.0.0.1:45530 - "GET /v1/usage HTTP/1.1" 401 Unauthorized
+INFO:     127.0.0.1:40438 - "GET /v1/stats HTTP/1.1" 401 Unauthorized
+INFO:     127.0.0.1:40428 - "GET /v1/verifications?limit=50&open_only=true HTTP/1.1" 401 Unauthorized
+INFO:     127.0.0.1:40446 - "GET /v1/usage HTTP/1.1" 401 Unauthorized
+INFO:     127.0.0.1:50798 - "GET /v1/verifications?limit=50&open_only=true HTTP/1.1" 401 Unauthorized
+INFO:     127.0.0.1:50802 - "GET /v1/stats HTTP/1.1" 401 Unauthorized
+INFO:     127.0.0.1:50808 - "GET /v1/usage HTTP/1.1" 401 Unauthorized
+INFO:     127.0.0.1:34978 - "GET /v1/verifications?limit=50&open_only=true HTTP/1.1" 401 Unauthorized
+INFO:     127.0.0.1:34986 - "GET /v1/stats HTTP/1.1" 401 Unauthorized
+INFO:     127.0.0.1:34994 - "GET /v1/usage HTTP/1.1" 401 Unauthorized
+INFO:     127.0.0.1:56264 - "GET /v1/verifications?limit=50&open_only=true HTTP/1.1" 401 Unauthorized
+INFO:     127.0.0.1:56280 - "GET /v1/stats HTTP/1.1" 401 Unauthorized
+INFO:     127.0.0.1:56290 - "GET /v1/usage HTTP/1.1" 401 Unauthorized
+INFO:     127.0.0.1:56306 - "GET /v1/verifications?limit=50&open_only=true HTTP/1.1" 401 Unauthorized
+INFO:     127.0.0.1:56310 - "GET /v1/stats HTTP/1.1" 401 Unauthorized
+INFO:     127.0.0.1:56324 - "GET /v1/usage HTTP/1.1" 401 Unauthorized
+INFO:     127.0.0.1:36602 - "GET /demo/samples HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:36600 - "GET /v1/events HTTP/1.1" 401 Unauthorized
+INFO:     127.0.0.1:36608 - "GET /demo/samples HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:36618 - "GET /v1/events HTTP/1.1" 401 Unauthorized
+INFO:     Shutting down
+INFO:     Waiting for application shutdown.
+INFO:     Application shutdown complete.
+INFO:     Finished server process [466395]
+INFO:     Stopping reloader process [466393]

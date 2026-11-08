@@ -1,0 +1,30 @@
+[0;34m[2026-10-08 13:58:43][0m Log directory: /home/darshan/Projects/pehchaan/logs
+[0;34m[2026-10-08 13:58:43][0m Checking required system tools...
+[0;32m[2026-10-08 13:58:43] ✔ Prerequisites check passed (uv and npm found).[0m
+[0;34m[2026-10-08 13:58:43][0m Checking environment files...
+[0;32m[2026-10-08 13:58:43] ✔ api/.env already exists.[0m
+[0;34m[2026-10-08 13:58:43][0m Syncing backend Python virtual environment and dependencies...
+Resolved 73 packages in 1ms
+Checked 68 packages in 7ms
+[0;32m[2026-10-08 13:58:43] ✔ Backend dependencies synced.[0m
+[0;34m[2026-10-08 13:58:43][0m Checking ONNX models...
+skip     face_detection_yunet_2023mar.onnx
+skip     face_recognition_sface_2021dec.onnx
+skip     minifasnet_v2.onnx
+skip     wechat/detect.prototxt
+skip     wechat/detect.caffemodel
+skip     wechat/sr.prototxt
+skip     wechat/sr.caffemodel
+models in /home/darshan/Projects/pehchaan/api/models
+[0;32m[2026-10-08 13:58:43] ✔ Model check completed.[0m
+[0;34m[2026-10-08 13:58:43][0m Checking frontend dependencies...
+[0;32m[2026-10-08 13:58:43] ✔ web/node_modules found.[0m
+[0;34m[2026-10-08 13:58:43][0m Starting backend API server on http://localhost:8000 (logging to /home/darshan/Projects/pehchaan/logs/api.log)...
+[0;34m[2026-10-08 13:58:43][0m Waiting for backend API healthcheck...
+[0;32m[2026-10-08 13:58:45] ✔ Backend is up and running at http://localhost:8000 (Docs: http://localhost:8000/docs)[0m
+[0;34m[2026-10-08 13:58:45][0m Starting frontend dev server on http://localhost:5173 (logging to /home/darshan/Projects/pehchaan/logs/web.log)...
+[0;32m[2026-10-08 13:58:47] ✔ Frontend dev server is running (Logs: /home/darshan/Projects/pehchaan/logs/web.log)[0m
+[1;33m[2026-10-08 14:14:50] ⚠ Stopping running services...[0m
+[0;34m[2026-10-08 14:14:50][0m All services stopped.
+[1;33m[2026-10-08 14:14:50] ⚠ Stopping running services...[0m
+[0;34m[2026-10-08 14:14:50][0m All services stopped.
